@@ -6,7 +6,7 @@ st.set_page_config(page_title="Lojistik Sevkiyat Paneli", layout="wide")
 # Sistem Hafızası (Session State) Kurulumları
 if 'sevkiyatlar' not in st.session_state:
     st.session_state.sevkiyatlar = pd.DataFrame([
-        {"MÜŞTERİ": "A101", "DEPO": "İZMİR", "ÜRÜNLER": "1.50 LT PET SU", "PLAKA": "15AB175", "DURUM": "YÜKLENDİ"},
+        {"MÜŞTERİ": "A101", "DEPO": "İZMİR", "ÜRÜNLER": "1.50 LT PET SU", "PLAKA": "15AB175", "DURUM": "PLAKA ATANDI"},
         {"MÜŞTERİ": "BİM", "DEPO": "KONYA", "ÜRÜNLER": "0.50 LT PET SU, 5.00 LT PET SU", "PLAKA": "", "DURUM": "BEKLİYOR (BOŞTA)"},
     ])
 if 'sofor_listesi' not in st.session_state:
@@ -45,7 +45,7 @@ else:
     sifre = st.sidebar.text_input("Yönetici Şifresi:", type="password")
     
     if sifre == "1234":
-        st.success("Giriş Başarılı. Veri ekleme ve güncelleme yapabilirsiniz.")
+        st.success("Giriş Başarılı. Veri ekleme and güncelleme yapabilirsiniz.")
         
         # Hafızada biriken bildirim mesajlarını göster
         if st.session_state.mesaj_sofor:
@@ -61,18 +61,17 @@ else:
             st.success(st.session_state.mesaj_genel)
             st.session_state.mesaj_genel = ""
 
-        # GÜN SONU VE İŞ TEMİZLEME PANELİ (Yeni Eklenen Bölüm)
+        # GÜN SONU VE İŞ TEMİZLEME PANELİ
         st.divider()
         st.subheader("🧹 4. Gün Sonu Temizliği & İptal İşlemleri")
         col_g1, col_g2 = st.columns(2)
         
         with col_g1:
             st.markdown("**🔄 Gün Sonu Sıfırlama**")
-            st.caption("Yüklemesi tamamlanan (Yeşil) tüm işleri ekrandan temizler. Bekleyen (Turuncu) işler sonraki güne kalır.")
-            if st.button("🗑️ Sadece 'YÜKLENDİ' Olanları Listeden Temizle", type="secondary"):
-                # Sadece durumu BEKLİYOR (BOŞTA) olanları filtreleyip koruyoruz
+            st.caption("Plakası atanan (Yeşil) tüm işleri ekrandan temizler. Bekleyen (Turuncu) işler sonraki güne kalır.")
+            if st.button("🗑️ Sadece 'PLAKA ATANDI' Olanları Listeden Temizle", type="secondary"):
                 st.session_state.sevkiyatlar = st.session_state.sevkiyatlar[st.session_state.sevkiyatlar["DURUM"] == "BEKLİYOR (BOŞTA)"].reset_index(drop=True)
-                st.session_state.mesaj_genel = "🧹 Yüklenen tüm işler ekrandan temizlendi! Bekleyen işler ertesi güne devredildi."
+                st.session_state.mesaj_genel = "🧹 Plakası atanan tüm işler ekrandan temizlendi! Bekleyen işler ertesi güne devredildi."
                 st.rerun()
                 
         with col_g2:
@@ -83,7 +82,7 @@ else:
                 silme_secenekleri = []
                 silme_haritasi = {}
                 for list_idx, (real_idx, row) in enumerate(st.session_state.sevkiyatlar.iterrows()):
-                    durum_notu = "✅" if row['DURUM'] == "YÜKLENDİ" else "⏳"
+                    durum_notu = "✅" if row['DURUM'] == "PLAKA ATANDI" else "⏳"
                     opt_text = f"Sıra {list_idx+1}: {durum_notu} {row['MÜŞTERİ']} ({row['DEPO']}) -> {row['ÜRÜNLER']}"
                     silme_secenekleri.append(opt_text)
                     silme_haritasi[opt_text] = real_idx
@@ -195,7 +194,7 @@ else:
                         plaka_ayikla = secilen_sofor
                     
                     st.session_state.sevkiyatlar.loc[gercek_satir_no, "PLAKA"] = plaka_ayikla
-                    st.session_state.sevkiyatlar.loc[gercek_satir_no, "DURUM"] = "YÜKLENDİ"
+                    st.session_state.sevkiyatlar.loc[gercek_satir_no, "DURUM"] = "PLAKA ATANDI"
                     st.success("Plaka başarıyla atandı ve satır güncellendi!")
                     st.rerun()
         else:
