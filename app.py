@@ -23,13 +23,13 @@ st.sidebar.markdown("### 🚪 SİSTEM GİRİŞİ")
 giris_turu = st.sidebar.radio("Rolünüzü Seçin:", ["🚚 Şoför Ekranı (Sadece İzleme)", "⚙️ Yönetici Paneli (Veri Giriş)"])
 
 if giris_turu == "🚚 Şoför Ekranı (Sadece İzleme)":
-    st.markdown("<h2 style='text-align: center; color: #1e3d59;'>🚚 SEVKİYAT TAKİP VE AKTİF İŞ HAVUZU</h2>", unsafe_index=True)
-    st.markdown("<h5 style='text-align: center; color: #17b978;'>• CANLI ŞOFÖR BİLGİLENDİRME PANOSU •</h5>", unsafe_index=True)
+    st.markdown("<h2 style='text-align: center; color: #1e3d59;'>🚚 SEVKİYAT TAKİP VE AKTİF İŞ HAVUZU</h2>", unsafe_allow_html=True)
+    st.markdown("<h5 style='text-align: center; color: #17b978;'>• CANLI ŞOFÖR BİLGİLENDİRME PANOSU •</h5>", unsafe_allow_html=True)
     st.divider()
     
     styled_df = st.session_state.sevkiyatlar.style.apply(satir_boya, axis=1)
     st.dataframe(styled_df, use_container_width=True, hide_index=True)
-    st.markdown("<p style='text-align: center; color: #64748b; margin-top: 30px;'>🔄 Liste her dakika otomatik yenilenir. Boştaki (Turuncu) işler için sevkiyat amirliği ile görüşün.</p>", unsafe_index=True)
+    st.markdown("<p style='text-align: center; color: #64748b; margin-top: 30px;'>🔄 Liste her dakika otomatik yenilenir. Boştaki (Turuncu) işler için sevkiyat amirliği ile görüşün.</p>", unsafe_allow_html=True)
 
 else:
     st.title("⚙️ Lojistik Yönetici Kontrol Paneli")
@@ -90,6 +90,3 @@ else:
                 st.rerun()
         else:
             st.info("Havuzda plaka atanmayı bekleyen boşta iş yok.")
-            
-    elif sifre != "":
-        st.error("Hatalı Yönetici Şifresi!")
