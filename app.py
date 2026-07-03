@@ -6,16 +6,20 @@ st.set_page_config(page_title="Lojistik Sevkiyat Paneli", layout="wide")
 # Sistem Hafızası (Session State) Kurulumları
 if 'sevkiyatlar' not in st.session_state:
     st.session_state.sevkiyatlar = pd.DataFrame([
-        {"SİPARİŞ NO": "NZL4369", "MÜŞTERİ": "A101", "DEPO": "İZMİR", "ÜRÜNLER": "1.50 LT PET SU", "PLAKA": "15AB175", "DURUM": "YÜKLENDİ"},
-        {"SİPARİŞ NO": "NZL4367", "MÜŞTERİ": "BİM", "DEPO": "KONYA", "ÜRÜNLER": "0.50 LT PET SU, 5.00 LT PET SU", "PLAKA": "", "DURUM": "BEKLİYOR (BOŞTA)"},
+        {"MÜŞTERİ": "A101", "DEPO": "İZMİR", "ÜRÜNLER": "1.50 LT PET SU", "PLAKA": "15AB175", "DURUM": "YÜKLENDİ"},
+        {"MÜŞTERİ": "BİM", "DEPO": "KONYA", "ÜRÜNLER": "0.50 LT PET SU, 5.00 LT PET SU", "PLAKA": "", "DURUM": "BEKLİYOR (BOŞTA)"},
     ])
 if 'sofor_listesi' not in st.session_state:
     st.session_state.sofor_listesi = ["İbrahim Erdem (15AB175)", "Hasan Akın (15AL283)"]
 if 'depo_listesi' not in st.session_state:
     st.session_state.depo_listesi = ["A101 - İZMİR", "BİM - KONYA", "ABANT SU - BURDUR"]
 if 'urun_listesi' not in st.session_state:
-    # Varsayılan ürün çeşitleri
     st.session_state.urun_listesi = ["0.50 LT PET SU", "1.50 LT PET SU", "5.00 LT PET SU"]
+
+# Kaydedildi mesajlarını sayfa yenilense de gösterebilmek için geçici hafıza alanları
+if 'mesaj_sofor' not in st.session_state: st.session_state.mesaj_sofor = ""
+if 'mesaj_depo' not in st.session_state: st.session_state.mesaj_depo = ""
+if 'mesaj_urun' not in st.session_state: st.session_state.mesaj_urun = ""
 
 def satir_boya(row):
     if str(row["PLAKA"]).strip() == "":
@@ -42,6 +46,17 @@ else:
     if sifre == "1234":
         st.success("Giriş Başarılı. Veri ekleme ve güncelleme yapabilirsiniz.")
         
+        # Üstte biriken yeşil uyarı mesajlarını göster ve temizle
+        if st.session_state.mesaj_sofor:
+            st.success(st.session_state.mesaj_sofor)
+            st.session_state.mesaj_sofor = ""
+        if st.session_state.mesaj_depo:
+            st.success(st.session_state.mesaj_depo)
+            st.session_state.mesaj_depo = ""
+        if st.session_state.mesaj_urun:
+            st.success(st.session_state.mesaj_urun)
+            st.session_state.mesaj_urun = ""
+
         st.subheader("📦 1. Hızlı Tanımlamalar (Hafızaya Alınacak Sabitler)")
         col_s1, col_s2, col_s3 = st.columns(3)
         
@@ -53,7 +68,7 @@ else:
                 if st.form_submit_button("💾 Şoförü Hafızaya Ekle"):
                     if s_ad and s_plaka:
                         st.session_state.sofor_listesi.append(f"{s_ad} ({s_plaka})")
-                        st.toast(f"👤 {s_ad} hafızaya kaydedildi!")
+                        st.session_state.mesaj_sofor = f"✅ Şoför {s_ad} ({s_plaka}) başarıyla hafızaya kaydedildi!"
                         st.rerun()
                         
         with col_s2:
@@ -64,7 +79,7 @@ else:
                 if st.form_submit_button("💾 Depoyu Hafızaya Ekle"):
                     if m_ad and d_yer:
                         st.session_state.depo_listesi.append(f"{m_ad} - {d_yer}")
-                        st.toast(f"🏢 {m_ad} - {d_yer} hafızaya kaydedildi!")
+                        st.session_state.mesaj_depo = f"✅ Depo {m_ad} - {d_yer} başarıyla hafızaya kaydedildi!"
                         st.rerun()
 
         with col_s3:
@@ -75,29 +90,24 @@ else:
                     if yeni_urun:
                         if yeni_urun not in st.session_state.urun_listesi:
                             st.session_state.urun_listesi.append(yeni_urun)
-                            st.toast(f"💧 {yeni_urun} ürün listesine eklendi!")
+                            st.session_state.mesaj_urun = f"✅ Ürün {yeni_urun} başarıyla ürün listesine eklendi!"
                             st.rerun()
         
         st.divider()
         st.subheader("➕ 2. Günlük Yeni İş Emri Ekle")
         with st.form("is_formu", clear_on_submit=True):
-            c1, c2, c3 = st.columns(3)
+            c1, c2 = st.columns(2)
             with c1: 
-                siparis_no = st.text_input("Sipariş Numarası:")
-            with c2: 
                 secilen_yer = st.selectbox("Müşteri & Depo Seç (Hafızadan):", st.session_state.depo_listesi)
-            with c3: 
-                # Çoklu ürün seçimi sağlayan alan (Multiselect)
+            with c2: 
                 secilen_urunler = st.multiselect("Yüklenecek Ürünleri Seçin (Çoklu Seçilebilir):", st.session_state.urun_listesi)
             
             if st.form_submit_button("🚀 Veriyi Havuza Gönder (Turuncu Yap)"):
-                if siparis_no and secilen_yer and secilen_urunler:
+                if secilen_yer and secilen_urunler:
                     m_parca, d_parca = secilen_yer.split(" - ")
-                    # Seçilen ürünleri aralarına virgül koyarak tek bir yazı haline getiriyoruz
                     urunler_metni = ", ".join(secilen_urunler)
                     
                     yeni_is = {
-                        "SİPARİŞ NO": siparis_no, 
                         "MÜŞTERİ": m_parca, 
                         "DEPO": d_parca, 
                         "ÜRÜNLER": urunler_metni, 
@@ -108,21 +118,33 @@ else:
                     st.success("İş emri başarıyla havuza eklendi!")
                     st.rerun()
                 else:
-                    st.error("Lütfen Sipariş No, Depo ve en az bir Ürün seçtiğinizden emin olun.")
+                    st.error("Lütfen Depo ve en az bir Ürün seçtiğinizden emin olun.")
 
         st.divider()
         st.subheader("✍️ 3. Boştaki İşe Plaka / Şoför Ata")
-        bostaki_isler = st.session_state.sevkiyatlar[st.session_state.sevkiyatlar["PLAKA"] == ""]["SİPARİŞ NO"].tolist()
         
-        if bostaki_isler:
+        # Plakası boş olan satırları bulup indeks numarası ve müşteri bilgisiyle listeliyoruz
+        bostaki_isler_df = st.session_state.sevkiyatlar[st.session_state.sevkiyatlar["PLAKA"] == ""]
+        
+        if not bostaki_isler_df.empty:
+            # Seçim kutusunda göstermek için benzersiz seçenekler hazırlıyoruz
+            bostaki_secenekler = []
+            for idx, row in bostaki_isler_df.iterrows():
+                bostaki_secenekler.append(f"Sıra {idx+1}: {row['MÜŞTERİ']} ({row['DEPO']}) -> {row['ÜRÜNLER']}")
+                
             cc1, cc2 = st.columns(2)
-            with cc1: secilen_is = st.selectbox("Plaka Atanacak Sipariş No:", bostaki_isler)
-            with cc2: secilen_sofor = st.selectbox("Atanacak Şoför & Araç (Hafızadan):", st.session_state.sofor_listesi)
+            with cc1: 
+                secilen_is_metni = st.selectbox("Plaka Atanacak İş Emrini Seçin:", bostaki_secenekler)
+            with cc2: 
+                secilen_sofor = st.selectbox("Atanacak Şoför & Araç (Hafızadan):", st.session_state.sofor_listesi)
             
             if st.button("✅ Plakayı Güncelle (Satırı Yeşile Döndür)"):
+                # Seçilen metinden tablodaki gerçek indeks numarasını geri ayıklıyoruz
+                secilen_sira_no = int(secilen_is_metni.split(":")[0].replace("Sıra ", "")) - 1
                 plaka_ayikla = secilen_sofor.split("(")[1].replace(")", "")
-                st.session_state.sevkiyatlar.loc[st.session_state.sevkiyatlar["SİPARİŞ NO"] == secilen_is, "PLAKA"] = plaka_ayikla
-                st.session_state.sevkiyatlar.loc[st.session_state.sevkiyatlar["SİPARİŞ NO"] == secilen_is, "DURUM"] = "YÜKLENDİ"
+                
+                st.session_state.sevkiyatlar.loc[secilen_sira_no, "PLAKA"] = plaka_ayikla
+                st.session_state.sevkiyatlar.loc[secilen_sira_no, "DURUM"] = "YÜKLENDİ"
                 st.success("Plaka başarıyla atandı!")
                 st.rerun()
         else:
