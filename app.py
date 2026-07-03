@@ -20,6 +20,7 @@ if 'urun_listesi' not in st.session_state:
 if 'mesaj_sofor' not in st.session_state: st.session_state.mesaj_sofor = ""
 if 'mesaj_depo' not in st.session_state: st.session_state.mesaj_depo = ""
 if 'mesaj_urun' not in st.session_state: st.session_state.mesaj_urun = ""
+if 'mesaj_genel' not in st.session_state: st.session_state.mesaj_genel = ""
 
 def satir_boya(row):
     if str(row["PLAKA"]).strip() == "":
@@ -46,7 +47,7 @@ else:
     if sifre == "1234":
         st.success("Giriş Başarılı. Veri ekleme ve güncelleme yapabilirsiniz.")
         
-        # Hafızada biriken tüm yeşil kayıt mesajlarını göster
+        # Hafızada biriken bildirim mesajlarını göster
         if st.session_state.mesaj_sofor:
             st.success(st.session_state.mesaj_sofor)
             st.session_state.mesaj_sofor = ""
@@ -56,7 +57,47 @@ else:
         if st.session_state.mesaj_urun:
             st.success(st.session_state.mesaj_urun)
             st.session_state.mesaj_urun = ""
+        if st.session_state.mesaj_genel:
+            st.success(st.session_state.mesaj_genel)
+            st.session_state.mesaj_genel = ""
 
+        # GÜN SONU VE İŞ TEMİZLEME PANELİ (Yeni Eklenen Bölüm)
+        st.divider()
+        st.subheader("🧹 4. Gün Sonu Temizliği & İptal İşlemleri")
+        col_g1, col_g2 = st.columns(2)
+        
+        with col_g1:
+            st.markdown("**🔄 Gün Sonu Sıfırlama**")
+            st.caption("Yüklemesi tamamlanan (Yeşil) tüm işleri ekrandan temizler. Bekleyen (Turuncu) işler sonraki güne kalır.")
+            if st.button("🗑️ Sadece 'YÜKLENDİ' Olanları Listeden Temizle", type="secondary"):
+                # Sadece durumu BEKLİYOR (BOŞTA) olanları filtreleyip koruyoruz
+                st.session_state.sevkiyatlar = st.session_state.sevkiyatlar[st.session_state.sevkiyatlar["DURUM"] == "BEKLİYOR (BOŞTA)"].reset_index(drop=True)
+                st.session_state.mesaj_genel = "🧹 Yüklenen tüm işler ekrandan temizlendi! Bekleyen işler ertesi güne devredildi."
+                st.rerun()
+                
+        with col_g2:
+            st.markdown("**❌ Özel İş İptal Et / Sil**")
+            st.caption("İptal olan veya yanlış girilen herhangi bir iş emrini listeden tamamen kaldırır.")
+            
+            if not st.session_state.sevkiyatlar.empty:
+                silme_secenekleri = []
+                silme_haritasi = {}
+                for list_idx, (real_idx, row) in enumerate(st.session_state.sevkiyatlar.iterrows()):
+                    durum_notu = "✅" if row['DURUM'] == "YÜKLENDİ" else "⏳"
+                    opt_text = f"Sıra {list_idx+1}: {durum_notu} {row['MÜŞTERİ']} ({row['DEPO']}) -> {row['ÜRÜNLER']}"
+                    silme_secenekleri.append(opt_text)
+                    silme_haritasi[opt_text] = real_idx
+                    
+                secilen_silinecek = st.selectbox("Sistemden Tamamen Silinecek İşi Seçin:", silme_secenekleri, key="silme_box")
+                if st.button("🚨 Seçilen İş Emrini Listeden Sil", type="primary"):
+                    gercek_sil_idx = silme_haritasi[secilen_silinecek]
+                    st.session_state.sevkiyatlar = st.session_state.sevkiyatlar.drop(gercek_sil_idx).reset_index(drop=True)
+                    st.session_state.mesaj_genel = "❌ Seçilen iş emri başarıyla sistemden kaldırıldı!"
+                    st.rerun()
+            else:
+                st.info("Listede silinebilecek aktif iş emri bulunmuyor.")
+
+        st.divider()
         st.subheader("📦 1. Hızlı Tanımlamalar (Hafızaya Alınacak Sabitler)")
         col_s1, col_s2, col_s3 = st.columns(3)
         
@@ -104,7 +145,6 @@ else:
             
             if st.form_submit_button("🚀 Veriyi Havuza Gönder (Turuncu Yap)"):
                 if secilen_yer and secilen_urunler:
-                    # Güvenli ayırma mantığı: Hata ihtimalini sıfırlıyoruz
                     if " - " in secilen_yer:
                         m_parca, d_parca = secilen_yer.split(" - ", 1)
                     else:
@@ -128,14 +168,12 @@ else:
         st.divider()
         st.subheader("✍️ 3. Boştaki İşe Plaka / Şoför Ata")
         
-        # Boştaki işleri filtrele
         bostaki_isler_df = st.session_state.sevkiyatlar[st.session_state.sevkiyatlar["PLAKA"] == ""]
         
         if not bostaki_isler_df.empty:
             bostaki_secenekler = []
             indeks_haritasi = {}
             
-            # Seçim listesini oluştururken arka plandaki gerçek satır numaralarını bağlıyoruz
             for list_idx, (real_idx, row) in enumerate(bostaki_isler_df.iterrows()):
                 gorunum_metni = f"İş Sırası {list_idx+1}: {row['MÜŞTERİ']} ({row['DEPO']}) -> {row['ÜRÜNLER']}"
                 bostaki_secenekler.append(gorunum_metni)
@@ -149,7 +187,6 @@ else:
             
             if st.button("✅ Plakayı Güncelle (Satırı Yeşile Döndür)"):
                 if secilen_is_metni and secilen_sofor:
-                    # Seçilen metne karşılık gelen gerçek satır numarasını buluyoruz
                     gercek_satir_no = indeks_haritasi[secilen_is_metni]
                     
                     if "(" in secilen_sofor:
