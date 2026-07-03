@@ -16,7 +16,7 @@ if 'depo_listesi' not in st.session_state:
 if 'urun_listesi' not in st.session_state:
     st.session_state.urun_listesi = ["0.50 LT PET SU", "1.50 LT PET SU", "5.00 LT PET SU"]
 
-# Kaydedildi mesajlarını sayfa yenilense de gösterebilmek için geçici hafıza alanları
+# Yeşille gösterilecek başarı mesajları için geçici hafıza alanları
 if 'mesaj_sofor' not in st.session_state: st.session_state.mesaj_sofor = ""
 if 'mesaj_depo' not in st.session_state: st.session_state.mesaj_depo = ""
 if 'mesaj_urun' not in st.session_state: st.session_state.mesaj_urun = ""
@@ -46,7 +46,7 @@ else:
     if sifre == "1234":
         st.success("Giriş Başarılı. Veri ekleme ve güncelleme yapabilirsiniz.")
         
-        # Üstte biriken yeşil uyarı mesajlarını göster ve temizle
+        # Hafızada biriken tüm yeşil kayıt mesajlarını göster
         if st.session_state.mesaj_sofor:
             st.success(st.session_state.mesaj_sofor)
             st.session_state.mesaj_sofor = ""
@@ -104,7 +104,12 @@ else:
             
             if st.form_submit_button("🚀 Veriyi Havuza Gönder (Turuncu Yap)"):
                 if secilen_yer and secilen_urunler:
-                    m_parca, d_parca = secilen_yer.split(" - ")
+                    # Güvenli ayırma mantığı: Hata ihtimalini sıfırlıyoruz
+                    if " - " in secilen_yer:
+                        m_parca, d_parca = secilen_yer.split(" - ", 1)
+                    else:
+                        m_parca, d_parca = secilen_yer, "Belirtilmedi"
+                        
                     urunler_metni = ", ".join(secilen_urunler)
                     
                     yeni_is = {
@@ -118,19 +123,23 @@ else:
                     st.success("İş emri başarıyla havuza eklendi!")
                     st.rerun()
                 else:
-                    st.error("Lütfen Depo ve en az bir Ürün seçtiğinizden emin olun.")
+                    st.error("Lütfen listeden hem Depo hem de en az bir Ürün çeşidi seçin.")
 
         st.divider()
         st.subheader("✍️ 3. Boştaki İşe Plaka / Şoför Ata")
         
-        # Plakası boş olan satırları bulup indeks numarası ve müşteri bilgisiyle listeliyoruz
+        # Boştaki işleri filtrele
         bostaki_isler_df = st.session_state.sevkiyatlar[st.session_state.sevkiyatlar["PLAKA"] == ""]
         
         if not bostaki_isler_df.empty:
-            # Seçim kutusunda göstermek için benzersiz seçenekler hazırlıyoruz
             bostaki_secenekler = []
-            for idx, row in bostaki_isler_df.iterrows():
-                bostaki_secenekler.append(f"Sıra {idx+1}: {row['MÜŞTERİ']} ({row['DEPO']}) -> {row['ÜRÜNLER']}")
+            indeks_haritasi = {}
+            
+            # Seçim listesini oluştururken arka plandaki gerçek satır numaralarını bağlıyoruz
+            for list_idx, (real_idx, row) in enumerate(bostaki_isler_df.iterrows()):
+                gorunum_metni = f"İş Sırası {list_idx+1}: {row['MÜŞTERİ']} ({row['DEPO']}) -> {row['ÜRÜNLER']}"
+                bostaki_secenekler.append(gorunum_metni)
+                indeks_haritasi[gorunum_metni] = real_idx
                 
             cc1, cc2 = st.columns(2)
             with cc1: 
@@ -139,13 +148,18 @@ else:
                 secilen_sofor = st.selectbox("Atanacak Şoför & Araç (Hafızadan):", st.session_state.sofor_listesi)
             
             if st.button("✅ Plakayı Güncelle (Satırı Yeşile Döndür)"):
-                # Seçilen metinden tablodaki gerçek indeks numarasını geri ayıklıyoruz
-                secilen_sira_no = int(secilen_is_metni.split(":")[0].replace("Sıra ", "")) - 1
-                plaka_ayikla = secilen_sofor.split("(")[1].replace(")", "")
-                
-                st.session_state.sevkiyatlar.loc[secilen_sira_no, "PLAKA"] = plaka_ayikla
-                st.session_state.sevkiyatlar.loc[secilen_sira_no, "DURUM"] = "YÜKLENDİ"
-                st.success("Plaka başarıyla atandı!")
-                st.rerun()
+                if secilen_is_metni and secilen_sofor:
+                    # Seçilen metne karşılık gelen gerçek satır numarasını buluyoruz
+                    gercek_satir_no = indeks_haritasi[secilen_is_metni]
+                    
+                    if "(" in secilen_sofor:
+                        plaka_ayikla = secilen_sofor.split("(")[1].replace(")", "")
+                    else:
+                        plaka_ayikla = secilen_sofor
+                    
+                    st.session_state.sevkiyatlar.loc[gercek_satir_no, "PLAKA"] = plaka_ayikla
+                    st.session_state.sevkiyatlar.loc[gercek_satir_no, "DURUM"] = "YÜKLENDİ"
+                    st.success("Plaka başarıyla atandı ve satır güncellendi!")
+                    st.rerun()
         else:
             st.info("Havuzda plaka atanmayı bekleyen boşta iş yok.")
