@@ -16,7 +16,7 @@ if 'depo_listesi' not in st.session_state:
 if 'urun_listesi' not in st.session_state:
     st.session_state.urun_listesi = ["0.50 LT PET SU", "1.50 LT PET SU", "5.00 LT PET SU"]
 
-# Yeşille gösterilecek başarı mesajları için geçici hafıza alanları
+# Mesaj hafızaları
 if 'mesaj_sofor' not in st.session_state: st.session_state.mesaj_sofor = ""
 if 'mesaj_depo' not in st.session_state: st.session_state.mesaj_depo = ""
 if 'mesaj_urun' not in st.session_state: st.session_state.mesaj_urun = ""
@@ -30,6 +30,12 @@ def satir_boya(row):
 
 st.sidebar.markdown("### 🚪 SİSTEM GİRİŞİ")
 giris_turu = st.sidebar.radio("Rolünüzü Seçin:", ["🚚 Şoför Ekranı (Sadece İzleme)", "⚙️ Yönetici Paneli (Veri Giriş)"])
+
+# 📌 AKILLI SIRALAMA MANTIĞI: Plakası boş olanlar (bekleyenler) hep en üstte, atananlar en altta kalır.
+if not st.session_state.sevkiyatlar.empty:
+    st.session_state.sevkiyatlar['is_empty_plaka'] = st.session_state.sevkiyatlar['PLAKA'].apply(lambda x: 0 if str(x).strip() == "" else 1)
+    st.session_state.sevkiyatlar = st.session_state.sevkiyatlar.sort_values(by=['is_empty_plaka']).reset_index(drop=True)
+    st.session_state.sevkiyatlar = st.session_state.sevkiyatlar.drop(columns=['is_empty_plaka'])
 
 if giris_turu == "🚚 Şoför Ekranı (Sadece İzleme)":
     st.markdown("<h2 style='text-align: center; color: #1e3d59;'>🚚 SEVKİYAT TAKİP VE AKTİF İŞ HAVUZU</h2>", unsafe_allow_html=True)
@@ -45,21 +51,12 @@ else:
     sifre = st.sidebar.text_input("Yönetici Şifresi:", type="password")
     
     if sifre == "1234":
-        st.success("Giriş Başarılı. Veri ekleme and güncelleme yapabilirsiniz.")
+        st.success("Giriş Başarılı. Veri ekleme ve güncelleme yapabilirsiniz.")
         
-        # Hafızada biriken bildirim mesajlarını göster
-        if st.session_state.mesaj_sofor:
-            st.success(st.session_state.mesaj_sofor)
-            st.session_state.mesaj_sofor = ""
-        if st.session_state.mesaj_depo:
-            st.success(st.session_state.mesaj_depo)
-            st.session_state.mesaj_depo = ""
-        if st.session_state.mesaj_urun:
-            st.success(st.session_state.mesaj_urun)
-            st.session_state.mesaj_urun = ""
-        if st.session_state.mesaj_genel:
-            st.success(st.session_state.mesaj_genel)
-            st.session_state.mesaj_genel = ""
+        if st.session_state.mesaj_sofor: st.success(st.session_state.mesaj_sofor); st.session_state.mesaj_sofor = ""
+        if st.session_state.mesaj_depo: st.success(st.session_state.mesaj_depo); st.session_state.mesaj_depo = ""
+        if st.session_state.mesaj_urun: st.success(st.session_state.mesaj_urun); st.session_state.mesaj_urun = ""
+        if st.session_state.mesaj_genel: st.success(st.session_state.mesaj_genel); st.session_state.mesaj_genel = ""
 
         # GÜN SONU VE İŞ TEMİZLEME PANELİ
         st.divider()
@@ -95,6 +92,37 @@ else:
                     st.rerun()
             else:
                 st.info("Listede silinebilecek aktif iş emri bulunmuyor.")
+
+        # 🛠️ YENİ EKLENEN BÖLÜM: ARAÇ ARIZA / PLAKA REVİZE PANELİ
+        st.divider()
+        st.subheader("🔄 5. Atanan Plakayı İptal Et (Arıza / Revize)")
+        st.caption("Araç arıza yaptığında veya müşteri ertelediğinde, plaka atanmış (Yeşil) bir işi tekrar 'Boşta/Bekliyor' (Turuncu) durumuna getirir.")
+        
+        # Sadece plakası dolu olanları filtrele
+        atanmis_isler_df = st.session_state.sevkiyatlar[st.session_state.sevkiyatlar["PLAKA"] != ""]
+        
+        if not atanmis_isler_df.empty:
+            revize_secenekleri = []
+            revize_haritasi = {}
+            for list_idx, (real_idx, row) in enumerate(atanmis_isler_df.iterrows()):
+                rev_text = f"İş {list_idx+1}: {row['MÜŞTERİ']} ({row['DEPO']}) -> Araç: {row['PLAKA']}"
+                revize_secenekleri.append(rev_text)
+                revize_haritasi[rev_text] = real_idx
+                
+            col_r1, col_r2 = st.columns([2, 1])
+            with col_r1:
+                secilen_revize_is = st.selectbox("Plakası İptal Edilecek İşi Seçin:", revize_secenekleri)
+            with col_r2:
+                st.markdown("<div style='margin-top:28px;'></div>", unsafe_allow_html=True)
+                if st.button("⚠️ Plakayı Sök / İşi Boşa Çıkar", use_container_width=True):
+                    gercek_rev_idx = revize_haritasi[secilen_revize_is]
+                    # Verileri eski haline çekiyoruz
+                    st.session_state.sevkiyatlar.loc[gercek_rev_idx, "PLAKA"] = ""
+                    st.session_state.sevkiyatlar.loc[gercek_rev_idx, "DURUM"] = "BEKLİYOR (BOŞTA)"
+                    st.session_state.mesaj_genel = "🔄 Araç plakası iptal edildi, iş emri yeniden havuzun üst sırasına gönderildi!"
+                    st.rerun()
+        else:
+            st.info("Şu anda plakası atanmış (Yeşil) aktif bir iş bulunmuyor.")
 
         st.divider()
         st.subheader("📦 1. Hızlı Tanımlamalar (Hafızaya Alınacak Sabitler)")
@@ -195,7 +223,7 @@ else:
                     
                     st.session_state.sevkiyatlar.loc[gercek_satir_no, "PLAKA"] = plaka_ayikla
                     st.session_state.sevkiyatlar.loc[gercek_satir_no, "DURUM"] = "PLAKA ATANDI"
-                    st.success("Plaka başarıyla atandı ve satır güncellendi!")
+                    st.success("Plaka başarıyla atandı!")
                     st.rerun()
         else:
             st.info("Havuzda plaka atanmayı bekleyen boşta iş yok.")
