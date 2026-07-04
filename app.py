@@ -49,12 +49,11 @@ df_soforler = tabloyu_oku("Soforler")
 df_depolar = tabloyu_oku("Depolar")
 df_urunler = tabloyu_oku("Urunler")
 
-# 🛡️ GÜÇLÜ SÜTUN KORUMASI (KeyError Hatalarını Tamamen Engeller)
+# 🛡️ GÜÇLÜ SÜTUN KORUMASI
 SEVKIYAT_SUTUNLARI = ["SIRA_NO", "MÜŞTERİ", "DEPO", "ÜRÜNLER", "PLAKA", "DURUM"]
 if df_sevkiyatlar.empty or not all(c in df_sevkiyatlar.columns for c in SEVKIYAT_SUTUNLARI):
     df_sevkiyatlar = pd.DataFrame(columns=SEVKIYAT_SUTUNLARI)
 
-# Boş veri düzeltmeleri
 df_sevkiyatlar = df_sevkiyatlar.fillna("")
 for c in SEVKIYAT_SUTUNLARI:
     df_sevkiyatlar[c] = df_sevkiyatlar[c].astype(str).str.replace("nan", "", case=False).str.strip()
@@ -66,17 +65,17 @@ if df_urunler.empty: df_urunler = pd.DataFrame(columns=["URUN_ADI"])
 # Seçim Kutusu Listelerini Oluşturma
 sofor_listesi = []
 for _, r in df_soforler.iterrows():
-    if r["SOFOR_ADI"] and r["PLAKA"]:
+    if r["SOFOR_ADI"] and r["PLAKA"] and r["SOFOR_ADI"].lower() != "nan":
         sofor_listesi.append(f"{r['SOFOR_ADI']} ({r['PLAKA']})")
 
 depo_listesi = []
 for _, r in df_depolar.iterrows():
-    if r["MUSTERI_ADI"] and r["GIDECEGI_YER"]:
+    if r["MUSTERI_ADI"] and r["GIDECEGI_YER"] and r["MUSTERI_ADI"].lower() != "nan":
         depo_listesi.append(f"{r['MUSTERI_ADI']} - {r['GIDECEGI_YER']}")
 
 urun_listesi = []
 for _, r in df_urunler.iterrows():
-    if r["URUN_ADI"]:
+    if r["URUN_ADI"] and r["URUN_ADI"].lower() != "nan":
         urun_listesi.append(r["URUN_ADI"].upper())
 
 if not urun_listesi:
@@ -115,7 +114,7 @@ else:
 
         # 📋 YENİ TANIMLAMALAR EKLEME ALANI
         st.divider()
-        st.subheader("📋 Sabit Tanımlamalar Ekle (E-Tabloya Kaydeder)")
+        st.subheader("📋 Sabit Tanımlamalar Ekle (Mükerrer Kontrollü)")
         col_tanim1, col_tanim2, col_tanim3 = st.columns(3)
         
         with col_tanim1:
@@ -125,9 +124,14 @@ else:
                 y_sh_plaka = st.text_input("Araç Plakası:")
                 if st.form_submit_button("➕ Şoförü Kaydet"):
                     if y_sh_adi and y_sh_plaka:
-                        if tabloya_yaz("Soforler", [y_sh_adi.strip(), y_sh_plaka.strip().upper()]):
-                            st.success(f"{y_sh_adi} kaydedildi!")
-                            st.rerun()
+                        temiz_plaka = y_sh_plaka.strip().upper()
+                        # Plaka veya isim kontrolü
+                        if not df_soforler.empty and temiz_plaka in df_soforler["PLAKA"].values:
+                            st.error(f"⚠️ Bu plaka ({temiz_plaka}) zaten kayıtlı!")
+                        else:
+                            if tabloya_yaz("Soforler", [y_sh_adi.strip(), temiz_plaka]):
+                                st.success(f"{y_sh_adi} başarıyla kaydedildi!")
+                                st.rerun()
                         
         with col_tanim2:
             st.markdown("**🏢 Yeni Müşteri & Depo Ekle**")
@@ -136,9 +140,15 @@ else:
                 y_g_yer = st.text_input("Depo / Gideceği Yer:")
                 if st.form_submit_button("➕ Depoyu Kaydet"):
                     if y_m_adi and y_g_yer:
-                        if tabloya_yaz("Depolar", [y_m_adi.strip(), y_g_yer.strip()]):
-                            st.success(f"{y_m_adi} kaydedildi!")
-                            st.rerun()
+                        temiz_musteri = y_m_adi.strip()
+                        temiz_depo = y_g_yer.strip()
+                        # Bayi/Müşteri adı kontrolü
+                        if not df_depolar.empty and temiz_musteri in df_depolar["MUSTERI_ADI"].values:
+                            st.error(f"⚠️ Bu müşteri/bayi zaten kayıtlı!")
+                        else:
+                            if tabloya_yaz("Depolar", [temiz_musteri, temiz_depo]):
+                                st.success(f"{temiz_musteri} başarıyla kaydedildi!")
+                                st.rerun()
 
         with col_tanim3:
             st.markdown("**📦 Yeni Ürün Çeşidi Ekle**")
@@ -146,9 +156,13 @@ else:
                 y_ur_adi = st.text_input("Ürün Adı:")
                 if st.form_submit_button("➕ Ürünü Kaydet"):
                     if y_ur_adi:
-                        if tabloya_yaz("Urunler", [y_ur_adi.strip().upper()]):
-                            st.success(f"{y_ur_adi.upper()} kaydedildi!")
-                            st.rerun()
+                        temiz_urun = y_ur_adi.strip().upper()
+                        if not df_urunler.empty and temiz_urun in df_urunler["URUN_ADI"].values:
+                            st.error("⚠️ Bu ürün zaten kayıtlı!")
+                        else:
+                            if tabloya_yaz("Urunler", [temiz_urun]):
+                                st.success(f"{temiz_urun} kaydedildi!")
+                                st.rerun()
 
         # ❌ SİSTEMDEN ŞOFÖR/BAYİ/ÜRÜN SİLME PANELİ
         st.divider()
@@ -219,7 +233,7 @@ else:
             if st.form_submit_button("🚀 Veriyi Havuza Gönder (Turuncu Yap)"):
                 if secilen_yer and secilen_urunler and "Önce" not in secilen_yer:
                     m_parca, d_parca = secilen_yer.split(" - ", 1) if " - " in secilen_yer else (secilen_yer, "Belirtilmedi")
-                    yeni_id = str(len(df_sevkiyatlar) + 1001) # Çakışma olmaması için benzersiz ID yapısı
+                    yeni_id = str(len(df_sevkiyatlar) + 1001)
                     if tabloya_yaz("Sevkiyatlar", [yeni_id, m_parca.strip(), d_parca.strip(), ", ".join(secilen_urunler), "", "BEKLİYOR (BOŞTA)"]):
                         st.success("İş başarıyla havuzda oluşturuldu!")
                         st.rerun()
@@ -227,7 +241,6 @@ else:
         # ✍️ BOŞTAKİ İŞE PLAKA / ŞOFÖR ATA
         st.divider()
         st.subheader("✍️ Boştaki İşe Plaka / Şoför Ata")
-        # Hem DURUM sütunu 'BEKLİYOR (BOŞTA)' olacak hem de PLAKA hücresi tamamen boş olacak
         bostaki_isler_df = df_sevkiyatlar[(df_sevkiyatlar["DURUM"] == "BEKLİYOR (BOŞTA)") | (df_sevkiyatlar["PLAKA"] == "")]
         bostaki_isler_df = bostaki_isler_df[bostaki_isler_df["PLAKA"] == ""]
         
@@ -267,7 +280,7 @@ else:
                 col_d1, col_d2 = st.columns(2)
                 with col_d1:
                     yeni_musteri = st.text_input("Müşteri Adı:", value=str(mevcut_satir["MÜŞTERİ"]))
-                    yeni_depo = st.text_input("Depo / Gideceği Yer:", value=str(mevcan_satir := mevcut_satir["DEPO"]))
+                    yeni_depo = st.text_input("Depo / Gideceği Yer:", value=str(mevcut_satir["DEPO"]))
                 with col_d2:
                     yeni_urunler_metni = st.text_input("Yüklü Ürünler:", value=str(mevcut_satir["ÜRÜNLER"]))
                     yeni_plaka = st.text_input("Atanan Plaka (Boş bırakırsanız boşa çıkar):", value=str(mevcut_satir["PLAKA"]))
