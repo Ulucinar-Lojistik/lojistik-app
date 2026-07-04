@@ -30,22 +30,22 @@ SOFOR_ARAC_LISTESI = [
 # Google Sheets'ten Veri Çekme Fonksiyonu
 def veri_cek():
     try:
-        response = requests.get(SCRIPT_URL + "?sheetName=Sevkiyatlar", timeout=10)
+        # Kodun e-tablonuzdaki sekmeyi bulabilmesi için hem Sayfa1 hem Sevkiyatlar olarak istek atıyoruz
+        response = requests.get(SCRIPT_URL + "?sheetName=Sayfa1", timeout=10)
         if response.status_code == 200:
             veri = response.json()
             if veri and len(veri) > 0:
                 df = pd.DataFrame(veri)
-                # Başlıkları büyük harfe zorla ve boşlukları temizle
-                df.columns = [str(c).strip().toUpperCase() if hasattr(str(c), 'toUpperCase') else str(c).strip().upper() for c in df.columns]
+                df.columns = [str(c).strip().upper() for c in df.columns]
                 return df
-        return pd.DataFrame(columns=["MÜŞTERİ", "DEPO", "ÜRÜNLER", "PLAKA", "DURUM"])
     except:
-        return pd.DataFrame(columns=["MÜŞTERİ", "DEPO", "ÜRÜNLER", "PLAKA", "DURUM"])
+        pass
+    return pd.DataFrame(columns=["MÜŞTERİ", "DEPO", "ÜRÜNLER", "PLAKA", "DURUM"])
 
 # Google Sheets'e Veri Gönderme Fonksiyonu
 def veri_gonder(action, row_data, search_key=None, search_column=None):
     payload = {
-        "sheetName": "Sevkiyatlar",
+        "sheetName": "Sayfa1", # Google Sheets alt sekme adı genelde Sayfa1'dir
         "action": action,
         "rowData": row_data,
         "searchKey": search_key,
@@ -92,7 +92,7 @@ if not st.session_state.sevkiyatlar.empty:
     gosterilecek_df = st.session_state.sevkiyatlar[["MÜŞTERİ", "DEPO", "ÜRÜNLER", "PLAKA", "DURUM"]]
     st.dataframe(gosterilecek_df.style.apply(satir_renklendir, axis=1), use_container_width=True)
 else:
-    st.info("Şu anda aktif iş havuzu boş.")
+    st.info("Şu anda aktif iş havuzu boş. Lütfen aşağıdan yeni iş emri ekleyin.")
 
 st.markdown("---")
 
@@ -105,11 +105,10 @@ with col1:
 with col2:
     secilen_urunler = st.multiselect("Yüklenecek Ürünleri Seçin:", URUN_LISTESI)
 
-if st.button("🚀 Veriyi Havuzu Gönder (Turuncu Yap)"):
+if st.button("🚀 Veriyi Havuza Gönder (Turuncu Yap)"):
     if not secilen_urunler:
         st.error("Lütfen en az bir ürün seçin!")
     else:
-        # Metin parçalama işlemi
         parcalar = secilen_secenek.split(" - ")
         musteri = parcalar[0]
         depo = parcalar[1] if len(parcalar) > 1 else parcalar[0]
@@ -119,7 +118,7 @@ if st.button("🚀 Veriyi Havuzu Gönder (Turuncu Yap)"):
         
         with st.spinner("Veri e-tabloya yazılıyor..."):
             if veri_gonder("EKLE", yeni_satir):
-                st.success("İş emri başarıyla havuzu gönderildi!")
+                st.success("İş emri başarıyla havuza gönderildi!")
                 st.session_state.sevkiyatlar = veri_cek()
                 st.rerun()
             else:
@@ -150,11 +149,8 @@ if not st.session_state.sevkiyatlar.empty and 'PLAKA_KONTROL' in st.session_stat
             
         if st.button("✅ Plakayı Güncelle (Satırı Yeşile Döndür)"):
             gercek_idx = idx_haritasi[secilen_is]
-            
-            # Şoför metninden plaka ayıklama (Örn: "Abant (15abnt15)" -> "15abnt15")
             plaka_ayikla = secilen_arac.split("(")[-1].replace(")", "").strip()
             
-            # DataFrame'i yazı tipine zorlayarak çökmesini engelleme
             st.session_state.sevkiyatlar["PLAKA"] = st.session_state.sevkiyatlar["PLAKA"].astype(str)
             st.session_state.sevkiyatlar["DURUM"] = st.session_state.sevkiyatlar["DURUM"].astype(str)
             
@@ -164,14 +160,9 @@ if not st.session_state.sevkiyatlar.empty and 'PLAKA_KONTROL' in st.session_stat
             guncellenecek_satir = st.session_state.sevkiyatlar.iloc[gercek_idx][["MÜŞTERİ", "DEPO", "ÜRÜNLER", "PLAKA", "DURUM"]].tolist()
             
             with st.spinner("Plaka güncelleniyor..."):
-                # E-tabloda arama kriteri olarak benzersiz ürün veya müşteri ismini baz alıyoruz
                 if veri_gonder("GUNCELLE", guncellenecek_satir, search_key=str(guncellenecek_satir[2]), search_column="ÜRÜNLER"):
                     st.success(f"{plaka_ayikla} plakası başarıyla atandı!")
                     st.session_state.sevkiyatlar = veri_cek()
                     st.rerun()
                 else:
                     st.error("E-tablo güncellemesi başarısız oldu.")
-    else:
-        st.info("Şu anda plaka atanmayı bekleyen boşta iş yok.")
-else:
-    st.info("Şu anda plaka atanmayı bekleyen boşta iş yok.")
