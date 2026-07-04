@@ -6,7 +6,7 @@ import json
 # Sayfa Genişlik Ayarı
 st.set_page_config(layout="wide", page_title="Lojistik Araç İş Takip Sistemi")
 
-# Sizin Oluşturduğunuz En Yeni Google Apps Script URL'si
+# Google Apps Script URL'niz
 SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYVCD0lLeo1l21CTaYw5RyXlUJIN168zsxvQD2Fx1RAJ5qQXGiobTcGNnqhyTnhHCaCg/exec"
 
 # Sabit Seçenek Verileri
@@ -30,7 +30,6 @@ SOFOR_ARAC_LISTESI = [
 # Google Sheets'ten Veri Çekme Fonksiyonu
 def veri_cek():
     try:
-        # Kodun e-tablonuzdaki sekmeyi bulabilmesi için hem Sayfa1 hem Sevkiyatlar olarak istek atıyoruz
         response = requests.get(SCRIPT_URL + "?sheetName=Sayfa1", timeout=10)
         if response.status_code == 200:
             veri = response.json()
@@ -45,7 +44,7 @@ def veri_cek():
 # Google Sheets'e Veri Gönderme Fonksiyonu
 def veri_gonder(action, row_data, search_key=None, search_column=None):
     payload = {
-        "sheetName": "Sayfa1", # Google Sheets alt sekme adı genelde Sayfa1'dir
+        "sheetName": "Sayfa1",
         "action": action,
         "rowData": row_data,
         "searchKey": search_key,
@@ -64,9 +63,9 @@ if 'sevkiyatlar' not in st.session_state:
 # --- PANEL ARAYÜZÜ ---
 st.title("🚚 SEVKİYAT TAKİP VE AKTİF İŞ HAVUZU")
 
-# Tabloyu Temizle: Boşluk ve Veri Tipi Hatalarını Önle
+# Tabloyu Temizle ve Hazırla
 if not st.session_state.sevkiyatlar.empty:
-    # Sütun kontrolü ve zorunlu veri tipi dönüşümü
+    # Sütun kontrolü ve zorunlu veri tipi dönüşümü (Metne Sabitleme)
     for col in ["MÜŞTERİ", "DEPO", "ÜRÜNLER", "PLAKA", "DURUM"]:
         if col in st.session_state.sevkiyatlar.columns:
             st.session_state.sevkiyatlar[col] = st.session_state.sevkiyatlar[col].fillna("").astype(str).str.strip()
@@ -75,10 +74,10 @@ if not st.session_state.sevkiyatlar.empty:
 
     # PLAKA_KONTROL sütununu hatasız oluşturma
     st.session_state.sevkiyatlar['PLAKA_KONTROL'] = st.session_state.sevkiyatlar['PLAKA'].apply(
-        lambda x: 0 if str(x) == "" or str(x).lower() == "nan" else 1
+        lambda x: 0 if str(x) == "" or str(x).lower() == "nan" or str(x).strip() == "" else 1
     )
 
-    # Renklendirme Kuralları (Müşteri Satırı Turuncu, Atanmış Satır Yeşil)
+    # Renklendirme Kuralları
     def satir_renklendir(row):
         try:
             if str(row.get('DURUM', '')).upper() == 'PLAKA ATANDI':
@@ -88,7 +87,6 @@ if not st.session_state.sevkiyatlar.empty:
         except:
             return [''] * len(row)
 
-    # Sadece ana sütunları göster
     gosterilecek_df = st.session_state.sevkiyatlar[["MÜŞTERİ", "DEPO", "ÜRÜNLER", "PLAKA", "DURUM"]]
     st.dataframe(gosterilecek_df.style.apply(satir_renklendir, axis=1), use_container_width=True)
 else:
@@ -151,13 +149,22 @@ if not st.session_state.sevkiyatlar.empty and 'PLAKA_KONTROL' in st.session_stat
             gercek_idx = idx_haritasi[secilen_is]
             plaka_ayikla = secilen_arac.split("(")[-1].replace(")", "").strip()
             
+            # --- 202. SATIRDAKİ STR/OBJECT HATA KORUMASI ---
+            # DataFrame'in ilgili sütununu seriye/object tipine tamamen güvenli şekilde zorluyoruz
             st.session_state.sevkiyatlar["PLAKA"] = st.session_state.sevkiyatlar["PLAKA"].astype(str)
             st.session_state.sevkiyatlar["DURUM"] = st.session_state.sevkiyatlar["DURUM"].astype(str)
             
+            # Atama işlemini doğrudan python seviyesinde gerçekleştiriyoruz
             st.session_state.sevkiyatlar.loc[gercek_idx, "PLAKA"] = str(plaka_ayikla)
             st.session_state.sevkiyatlar.loc[gercek_idx, "DURUM"] = "PLAKA ATANDI"
             
-            guncellenecek_satir = st.session_state.sevkiyatlar.iloc[gercek_idx][["MÜŞTERİ", "DEPO", "ÜRÜNLER", "PLAKA", "DURUM"]].tolist()
+            guncellenecek_satir = [
+                str(st.session_state.sevkiyatlar.loc[gercek_idx, "MÜŞTERİ"]),
+                str(st.session_state.sevkiyatlar.loc[gercek_idx, "DEPO"]),
+                str(st.session_state.sevkiyatlar.loc[gercek_idx, "ÜRÜNLER"]),
+                str(plaka_ayikla),
+                "PLAKA ATANDI"
+            ]
             
             with st.spinner("Plaka güncelleniyor..."):
                 if veri_gonder("GUNCELLE", guncellenecek_satir, search_key=str(guncellenecek_satir[2]), search_column="ÜRÜNLER"):
@@ -166,3 +173,7 @@ if not st.session_state.sevkiyatlar.empty and 'PLAKA_KONTROL' in st.session_stat
                     st.rerun()
                 else:
                     st.error("E-tablo güncellemesi başarısız oldu.")
+    else:
+        st.info("Şu anda plaka atanmayı bekleyen boşta iş yok.")
+else:
+    st.info("Şu anda plaka atanmayı bekleyen boşta iş yok.")
