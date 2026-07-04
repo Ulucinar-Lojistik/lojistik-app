@@ -7,7 +7,7 @@ st.set_page_config(page_title="Lojistik Sevkiyat Paneli", layout="wide")
 
 # 🔗 GOOGLE SHEETS VE APPS SCRIPT BAĞLANTI AYARLARI
 SHEET_ID = "1dxRbPvjXBwlozdEzlwqsQ-HSjf_nKU5hIvTLa_W4TaI"
-SCRIPT_URL = "https://script.google.com/macros/s/AKfycbylyS5H8FwyWy5QvUlHDWhunkkfbkqAou5h6zfBVwGApsukEtbZOukqUQdrcduuB8NOPA/exec"
+SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYVCD0lLeo1l21CTaYw5RyXlUJIN168zsxvQD2Fx1RAJ5qQXGiobTcGNnqhyTnhHCaCg/exec"
 
 # Google Sheets'ten Canlı Veri Okuma Fonksiyonu
 def tabloyu_oku(sekme_adi):
