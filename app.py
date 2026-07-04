@@ -15,7 +15,6 @@ def tabloyu_oku(sekme_adi):
         response = requests.get(url)
         if response.status_code == 200:
             df = pd.read_csv(StringIO(response.text))
-            # Sütun isimlerindeki boşlukları temizle
             df.columns = df.columns.str.strip()
             return df
         else:
@@ -23,16 +22,16 @@ def tabloyu_oku(sekme_adi):
     except:
         return pd.DataFrame()
 
-# Google Sheets'e Veri Gönderme (Form Üzerinden Web App ile veya Alternatif Güncelleme)
-# Not: Streamlit üzerinde doğrudan düzenleme için session_state senkronizasyonu kullanıyoruz.
-# Eğer Google tablosuna anlık yazma hatası oluşursa altyapıyı streamlit secrets ile güçlendireceğiz.
+# 🔄 SİSTEMİ BAŞLATMA VE CANLI VERİ ÇEKME
+if 'aksiyon_tetik' not in st.session_state:
+    st.session_state.aksiyon_tetik = 0
 
-# 🔄 CANLI VERİ ENTEGRASYONU (Her yenilemede tablodan güncel çekilir)
+# Tablolardan verileri çek
 df_sevkiyatlar = tabloyu_oku("Sevkiyatlar")
 df_soforler = tabloyu_oku("Soforler")
 df_depolar = tabloyu_oku("Depolar")
 
-# Eğer sekmeler boşsa veya hata alındıysa sistem çökmesin diye boş kalıplar:
+# Boşsa kalıpları oluştur
 if df_sevkiyatlar.empty:
     df_sevkiyatlar = pd.DataFrame(columns=["MÜŞTERİ", "DEPO", "ÜRÜNLER", "PLAKA", "DURUM"])
 if df_soforler.empty:
@@ -40,53 +39,50 @@ if df_soforler.empty:
 if df_depolar.empty:
     df_depolar = pd.DataFrame(columns=["MUSTERI_ADI", "GIDECEGI_YER"])
 
-# Hafızayı ilk açılışta canlı tablodan besle
-if 'sevkiyatlar' not in st.session_state:
+# Session State Hafızasını Senkronize Et
+if 'sevkiyatlar' not in st.session_state or st.session_state.aksiyon_tetik == 0:
     st.session_state.sevkiyatlar = df_sevkiyatlar
+if 'soforler_list' not in st.session_state or st.session_state.aksiyon_tetik == 0:
+    st.session_state.soforler_list = df_soforler
+if 'depolar_list' not in st.session_state or st.session_state.aksiyon_tetik == 0:
+    st.session_state.depolar_list = df_depolar
 
-# Sabit listeleri E-Tablodan dinamik oluştur
-sofor_listesi = []
-for _, r in df_soforler.iterrows():
-    if pd.notna(r["SOFOR_ADI"]) and pd.notna(r["PLAKA"]):
-        sofor_listesi.append(f"{r['SOFOR_ADI']} ({r['PLAKA']})")
-if not sofor_listesi:
-    sofor_listesi = ["Sistemde Şoför Bulunamadı (E-Tabloyu kontrol edin)"]
-
-depo_listesi = []
-for _, r in df_depolar.iterrows():
-    if pd.notna(r["MUSTERI_ADI"]) and pd.notna(r["GIDECEGI_YER"]):
-        depo_listesi.append(f"{r['MUSTERI_ADI']} - {r['GIDECEGI_YER']}")
-if not depo_listesi:
-    depo_listesi = ["Sistemde Depo Bulunamadı (E-Tabloyu kontrol edin)"]
-
-# Ürün listesi şimdilik sabit veya yönetici panelinden genişletilebilir
 if 'urun_listesi' not in st.session_state:
     st.session_state.urun_listesi = ["0.50 LT PET SU", "1.50 LT PET SU", "5.00 LT PET SU", "19 LT DAMACANA"]
-
-# Mesaj hafızaları
 if 'mesaj_genel' not in st.session_state: st.session_state.mesaj_genel = ""
 
+# Listeleri güncelle
+sofor_listesi = []
+for _, r in st.session_state.soforler_list.iterrows():
+    if pd.notna(r["SOFOR_ADI"]) and pd.notna(r["PLAKA"]):
+        sofor_listesi.append(f"{r['SOFOR_ADI']} ({r['PLAKA']})")
+
+depo_listesi = []
+for _, r in st.session_state.depolar_list.iterrows():
+    if pd.notna(r["MUSTERI_ADI"]) and pd.notna(r["GIDECEGI_YER"]):
+        depo_listesi.append(f"{r['MUSTERI_ADI']} - {r['GIDECEGI_YER']}")
+
+# Akıllı Sıralama Mantığı
+if not st.session_state.sevkiyatlar.empty:
+    st.session_state.sevkiyatlar['PLAKA_KONTROL'] = st.session_state.sevkiyatlar['PLAKA'].apply(lambda x: 0 if str(x).strip() == "" or pd.isna(x) or x == "" else 1)
+    st.session_state.sevkiyatlar = st.session_state.sevkiyatlar.sort_values(by=['PLAKA_KONTROL']).reset_index(drop=True)
+    st.session_state.sevkiyatlar = st.session_state.sevkiyatlar.drop(columns=['PLAKA_KONTROL'])
+
 def satir_boya(row):
-    if str(row["PLAKA"]).strip() == "" or pd.isna(row["PLAKA"]):
+    if str(row["PLAKA"]).strip() == "" or pd.isna(row["PLAKA"]) or row["PLAKA"] == "":
         return ['background-color: #fef7e0; color: #b06000; font-weight: bold;'] * len(row)
     else:
         return ['background-color: #e6f4ea; color: #137333; font-weight: 600;'] * len(row)
 
+# 📊 EKRAN GÖSTERİMİ
 st.sidebar.markdown("### 🚪 SİSTEM GİRİŞİ")
 giris_turu = st.sidebar.radio("Rolünüzü Seçin:", ["🚚 Şoför Ekranı (Sadece İzleme)", "⚙️ Yönetici Paneli (Veri Giriş)"])
-
-# 📌 AKILLI SIRALAMA MANTIĞI: Plakası boş olanlar (bekleyenler) hep en üstte, atananlar en altta kalır.
-if not st.session_state.sevkiyatlar.empty:
-    st.session_state.sevkiyatlar['PLAKA_KONTROL'] = st.session_state.sevkiyatlar['PLAKA'].apply(lambda x: 0 if str(x).strip() == "" or pd.isna(x) else 1)
-    st.session_state.sevkiyatlar = st.session_state.sevkiyatlar.sort_values(by=['PLAKA_KONTROL']).reset_index(drop=True)
-    st.session_state.sevkiyatlar = st.session_state.sevkiyatlar.drop(columns=['PLAKA_KONTROL'])
 
 if giris_turu == "🚚 Şoför Ekranı (Sadece İzleme)":
     st.markdown("<h2 style='text-align: center; color: #1e3d59;'>🚚 SEVKİYAT TAKİP VE AKTİF İŞ HAVUZU</h2>", unsafe_allow_html=True)
     st.markdown("<h5 style='text-align: center; color: #17b978;'>• CANLI ŞOFÖR BİLGİLENDİRME PANOSU •</h5>", unsafe_allow_html=True)
     st.divider()
     
-    # Boş verileri şık göster
     gosterilecek_df = st.session_state.sevkiyatlar.fillna("")
     styled_df = gosterilecek_df.style.apply(satir_boya, axis=1)
     st.dataframe(styled_df, use_container_width=True, hide_index=True)
@@ -97,26 +93,57 @@ else:
     sifre = st.sidebar.text_input("Yönetici Şifresi:", type="password")
     
     if sifre == "1234":
-        st.success("Giriş Başarılı. Veri ekleme ve güncelleme yapabilirsiniz.")
+        st.success("Giriş Başarılı. Tüm yönetim araçları aşağıdadır.")
         if st.session_state.mesaj_genel: st.success(st.session_state.mesaj_genel); st.session_state.mesaj_genel = ""
 
-        # GÜN SONU VE İŞ TEMİZLEME PANELİ
+        # 🌟 TEK SAYFADA YENİ ŞOFÖR VE DEPO EKLEME ALANI (İSTEDİĞİN YER)
         st.divider()
-        st.subheader("🧹 3. Gün Sonu Temizliği & İptal İşlemleri")
+        st.subheader("📋 Sabit Tanımlamalar (Şoför / Depo Kaydet)")
+        st.caption("Buraya eklediğin şoför ve depolar anında aşağıdaki seçim listelerine düşer.")
+        
+        col_tanim1, col_tanim2 = st.columns(2)
+        
+        with col_tanim1:
+            st.markdown("**🚚 Yeni Şoför & Plaka Ekle**")
+            with st.form("sh_form", clear_on_submit=True):
+                y_sh_adi = st.text_input("Şoför Adı Soyadı:")
+                y_sh_plaka = st.text_input("Araç Plakası:")
+                if st.form_submit_button("➕ Şoförü Sisteme Kaydet"):
+                    if y_sh_adi and y_sh_plaka:
+                        yeni_sh_row = pd.DataFrame([{"SOFOR_ADI": y_sh_adi, "PLAKA": y_sh_plaka}])
+                        st.session_state.soforler_list = pd.concat([st.session_state.soforler_list, yeni_sh_row], ignore_index=True)
+                        st.session_state.aksiyon_tetik += 1
+                        st.success(f"{y_sh_adi} şoför listesine eklendi!")
+                        st.rerun()
+                        
+        with col_tanim2:
+            st.markdown("**🏢 Yeni Müşteri & Depo Ekle**")
+            with st.form("dp_form", clear_on_submit=True):
+                y_m_adi = st.text_input("Müşteri Adı (Örn: BİM, A101):")
+                y_g_yer = st.text_input("Gideceği Yer / Depo (Örn: KONYA):")
+                if st.form_submit_button("➕ Depoyu Sisteme Kaydet"):
+                    if y_m_adi and y_g_yer:
+                        yeni_dp_row = pd.DataFrame([{"MUSTERI_ADI": y_m_adi, "GIDECEGI_YER": y_g_yer}])
+                        st.session_state.depolar_list = pd.concat([st.session_state.depolar_list, yeni_dp_row], ignore_index=True)
+                        st.session_state.aksiyon_tetik += 1
+                        st.success(f"{y_m_adi} - {y_g_yer} depo listesine eklendi!")
+                        st.rerun()
+
+        # 🧹 GÜN SONU VE İŞ TEMİZLEME PANELİ
+        st.divider()
+        st.subheader("🧹 Gün Sonu Temizliği & İptal İşlemleri")
         col_g1, col_g2 = st.columns(2)
         
         with col_g1:
             st.markdown("**🔄 Gün Sonu Sıfırlama**")
-            st.caption("Plakası atanan (Yeşil) tüm işleri ekrandan temizler. Bekleyen (Turuncu) işler kalır.")
             if st.button("🗑️ Sadece 'PLAKA ATANDI' Olanları Listeden Temizle", type="secondary"):
                 st.session_state.sevkiyatlar = st.session_state.sevkiyatlar[st.session_state.sevkiyatlar["DURUM"] == "BEKLİYOR (BOŞTA)"].reset_index(drop=True)
+                st.session_state.aksiyon_tetik += 1
                 st.session_state.mesaj_genel = "🧹 Plakası atanan tüm işler ekrandan temizlendi!"
                 st.rerun()
                 
         with col_g2:
             st.markdown("**❌ Özel İş İptal Et / Sil**")
-            st.caption("İptal olan iş emrini listeden tamamen kaldırır.")
-            
             if not st.session_state.sevkiyatlar.empty:
                 silme_secenekleri = []
                 silme_haritasi = {}
@@ -126,21 +153,21 @@ else:
                     silme_secenekleri.append(opt_text)
                     silme_haritasi[opt_text] = real_idx
                     
-                secilen_silinecek = st.selectbox("Sistemden Tamamen Silinecek İşi Seçin:", silme_secenekleri, key="silme_box")
+                secilen_silinecek = st.selectbox("Sistemden Tamamen Silinecek İşi Seçin:", silme_secenekleri)
                 if st.button("🚨 Seçilen İş Emrini Listeden Sil", type="primary"):
                     gercek_sil_idx = silme_haritasi[secilen_silinecek]
                     st.session_state.sevkiyatlar = st.session_state.sevkiyatlar.drop(gercek_sil_idx).reset_index(drop=True)
+                    st.session_state.aksiyon_tetik += 1
                     st.session_state.mesaj_genel = "❌ Seçilen iş emri başarıyla sistemden kaldırıldı!"
                     st.rerun()
 
-        # ARAÇ ARIZA / PLAKA REVİZE PANELİ
+        # 🔄 ARAÇ ARIZA / PLAKA REVİZE PANELİ
         st.divider()
-        st.subheader("🔄 4. Atanan Plakayı İptal Et (Arıza / Revize)")
-        st.caption("Araç arıza yaptığında, plaka atanmış (Yeşil) bir işi tekrar 'Boşta/Bekliyor' (Turuncu) durumuna getirir ve en üste taşır.")
+        st.subheader("🔄 Atanan Plakayı İptal Et (Arıza / Revize)")
         
-        atanmis_isler_df = st.session_state.sevkiyatlar[st.session_state.sevkiyatlar["PLAKA"].get("", pd.Series()) != ""]
+        atanmis_isler_df = pd.DataFrame()
         if not st.session_state.sevkiyatlar.empty:
-            atanmis_isler_df = st.session_state.sevkiyatlar[(st.session_state.sevkiyatlar["PLAKA"].str.strip() != "") & (st.session_state.sevkiyatlar["PLAKA"].notna())]
+            atanmis_isler_df = st.session_state.sevkiyatlar[(st.session_state.sevkiyatlar["PLAKA"].str.strip() != "") & (st.session_state.sevkiyatlar["PLAKA"].notna()) & (st.session_state.sevkiyatlar["PLAKA"] != "")]
         
         if not atanmis_isler_df.empty:
             revize_secenekleri = []
@@ -159,24 +186,24 @@ else:
                     gercek_rev_idx = revize_haritasi[secilen_revize_is]
                     st.session_state.sevkiyatlar.loc[gercek_rev_idx, "PLAKA"] = ""
                     st.session_state.sevkiyatlar.loc[gercek_rev_idx, "DURUM"] = "BEKLİYOR (BOŞTA)"
+                    st.session_state.aksiyon_tetik += 1
                     st.session_state.mesaj_genel = "🔄 Araç plakası iptal edildi, iş emri yeniden üst sıraya gönderildi!"
                     st.rerun()
         else:
             st.info("Şu anda plakası atanmış aktif bir iş bulunmuyor.")
 
-        # GÜNLÜK YENİ İŞ EMRİ EKLE
+        # ➕ GÜNLÜK YENİ İŞ EMRİ EKLE
         st.divider()
-        st.subheader("➕ 1. Günlük Yeni İş Emri Ekle")
-        st.caption("Müşteri ve Depolar doğrudan Google E-Tablonuzdaki canlı listeden çekilmektedir.")
+        st.subheader("➕ Günlük Yeni İş Emri Ekle")
         with st.form("is_formu", clear_on_submit=True):
             c1, c2 = st.columns(2)
             with c1: 
-                secilen_yer = st.selectbox("Müşteri & Depo Seç (Canlı Tablodan):", depo_listesi)
+                secilen_yer = st.selectbox("Müşteri & Depo Seç:", depo_listesi if depo_listesi else ["Önce yukarıdan depo ekleyin"])
             with c2: 
-                secilen_urunler = st.multiselect("Yüklenecek Ürünleri Seçin (Çoklu Seçim):", st.session_state.urun_listesi)
+                secilen_urunler = st.multiselect("Yüklenecek Ürünleri Seçin:", st.session_state.urun_listesi)
             
             if st.form_submit_button("🚀 Veriyi Havuza Gönder (Turuncu Yap)"):
-                if secilen_yer and secilen_urunler and "Sistemde" not in secilen_yer:
+                if secilen_yer and secilen_urunler and "Önce" not in secilen_yer:
                     if " - " in secilen_yer:
                         m_parca, d_parca = secilen_yer.split(" - ", 1)
                     else:
@@ -192,17 +219,17 @@ else:
                         "DURUM": "BEKLİYOR (BOŞTA)"
                     }
                     st.session_state.sevkiyatlar = pd.concat([st.session_state.sevkiyatlar, pd.DataFrame([yeni_is])], ignore_index=True)
+                    st.session_state.aksiyon_tetik += 1
                     st.success("İş emri başarıyla havuza eklendi!")
                     st.rerun()
-                else:
-                    st.error("Lütfen geçerli bir Depo ve en az bir Ürün seçin.")
 
-        # BOŞTAKİ İŞE PLAKA / ŞOFÖR ATA
+        # ✍️ BOŞTAKİ İŞE PLAKA / ŞOFÖR ATA
         st.divider()
-        st.subheader("✍️ 2. Boştaki İşe Plaka / Şoför Ata")
-        st.caption("Şoförler ve araç plakaları doğrudan Google E-Tablonuzdaki canlı listeden çekilmektedir.")
+        st.subheader("✍️ Boştaki İşe Plaka / Şoför Ata")
         
-        bostaki_isler_df = st.session_state.sevkiyatlar[(st.session_state.sevkiyatlar["PLAKA"].isna()) | (st.session_state.sevkiyatlar["PLAKA"].get("", pd.Series()).str.strip() == "")]
+        bostaki_isler_df = pd.DataFrame()
+        if not st.session_state.sevkiyatlar.empty:
+            bostaki_isler_df = st.session_state.sevkiyatlar[(st.session_state.sevkiyatlar["PLAKA"].isna()) | (st.session_state.sevkiyatlar["PLAKA"] == "") | (st.session_state.sevkiyatlar["PLAKA"].get("", pd.Series()).str.strip() == "")]
         
         if not bostaki_isler_df.empty:
             bostaki_secenekler = []
@@ -217,10 +244,10 @@ else:
             with cc1: 
                 secilen_is_metni = st.selectbox("Plaka Atanacak İş Emrini Seçin:", bostaki_secenekler)
             with cc2: 
-                secilen_sofor = st.selectbox("Atanacak Şoför & Araç (Canlı Tablodan):", sofor_listesi)
+                secilen_sofor = st.selectbox("Atanacak Şoför & Araç:", sofor_listesi if sofor_listesi else ["Önce yukarıdan şoför ekleyin"])
             
             if st.button("✅ Plakayı Güncelle (Satırı Yeşile Döndür)"):
-                if secilen_is_metni and secilen_sofor and "Sistemde" not in secilen_sofor:
+                if secilen_is_metni and secilen_sofor and "Önce" not in secilen_sofor:
                     gercek_satir_no = indeks_haritasi[secilen_is_metni]
                     
                     if "(" in secilen_sofor:
@@ -230,6 +257,7 @@ else:
                     
                     st.session_state.sevkiyatlar.loc[gercek_satir_no, "PLAKA"] = plaka_ayikla
                     st.session_state.sevkiyatlar.loc[gercek_satir_no, "DURUM"] = "PLAKA ATANDI"
+                    st.session_state.aksiyon_tetik += 1
                     st.success("Plaka başarıyla atandı!")
                     st.rerun()
         else:
