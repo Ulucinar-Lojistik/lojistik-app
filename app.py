@@ -49,46 +49,65 @@ df_soforler = tabloyu_oku("Soforler")
 df_depolar = tabloyu_oku("Depolar")
 df_urunler = tabloyu_oku("Urunler")
 
-# 🛡️ GÜÇLÜ SÜTUN KORUMASI
+# 🛡️ GÜÇLÜ SÜTUN VE HARF DUYARLILIĞI KORUMASI
+# Google Sheets'teki olası Türkçe/İngilizce büyük-küçük harf uyuşmazlıklarını çözüyoruz
+if not df_sevkiyatlar.empty:
+    df_sevkiyatlar.columns = df_sevkiyatlar.columns.str.upper()
+    # Eğer tabloda 'MÜŞTERİ' başlığı 'MUSTERI' geldiyse eşitleyelim
+    if "MUSTERI" in df_sevkiyatlar.columns and "MÜŞTERİ" not in df_sevkiyatlar.columns:
+        df_sevkiyatlar = df_sevkiyatlar.rename(columns={"MUSTERI": "MÜŞTERİ"})
+    if "URUNLER" in df_sevkiyatlar.columns and "ÜRÜNLER" not in df_sevkiyatlar.columns:
+        df_sevkiyatlar = df_sevkiyatlar.rename(columns={"URUNLER": "ÜRÜNLER"})
+
 SEVKIYAT_SUTUNLARI = ["SIRA_NO", "MÜŞTERİ", "DEPO", "ÜRÜNLER", "PLAKA", "DURUM"]
+
+# Eğer tablo tamamen boşsa veya eksik sütun varsa sıfırdan güvenli oluştur
 if df_sevkiyatlar.empty or not all(c in df_sevkiyatlar.columns for c in SEVKIYAT_SUTUNLARI):
     df_sevkiyatlar = pd.DataFrame(columns=SEVKIYAT_SUTUNLARI)
 
 df_sevkiyatlar = df_sevkiyatlar.fillna("")
 for c in SEVKIYAT_SUTUNLARI:
-    df_sevkiyatlar[c] = df_sevkiyatlar[c].astype(str).str.replace("nan", "", case=False).str.strip()
+    if c in df_sevkiyatlar.columns:
+        df_sevkiyatlar[c] = df_sevkiyatlar[c].astype(str).str.replace("nan", "", case=False).str.strip()
 
+# Diğer tabloların sütun güvenceleri
+if not df_soforler.empty: df_soforler.columns = df_soforler.columns.str.upper()
 if df_soforler.empty: df_soforler = pd.DataFrame(columns=["SOFOR_ADI", "PLAKA"])
+
+if not df_depolar.empty: df_depolar.columns = df_depolar.columns.str.upper()
 if df_depolar.empty: df_depolar = pd.DataFrame(columns=["MUSTERI_ADI", "GIDECEGI_YER"])
+
+if not df_urunler.empty: df_urunler.columns = df_urunler.columns.str.upper()
 if df_urunler.empty: df_urunler = pd.DataFrame(columns=["URUN_ADI"])
 
 # Seçim Kutusu Listelerini Oluşturma
 sofor_listesi = []
 for _, r in df_soforler.iterrows():
-    if r["SOFOR_ADI"] and r["PLAKA"] and r["SOFOR_ADI"].lower() != "nan":
+    if "SOFOR_ADI" in r and "PLAKA" in r and r["SOFOR_ADI"] and r["PLAKA"] and r["SOFOR_ADI"].lower() != "nan":
         sofor_listesi.append(f"{r['SOFOR_ADI']} ({r['PLAKA']})")
 
 depo_listesi = []
 for _, r in df_depolar.iterrows():
-    if r["MUSTERI_ADI"] and r["GIDECEGI_YER"] and r["MUSTERI_ADI"].lower() != "nan":
+    if "MUSTERI_ADI" in r and "GIDECEGI_YER" in r and r["MUSTERI_ADI"] and r["GIDECEGI_YER"] and r["MUSTERI_ADI"].lower() != "nan":
         depo_listesi.append(f"{r['MUSTERI_ADI']} - {r['GIDECEGI_YER']}")
 
 urun_listesi = []
 for _, r in df_urunler.iterrows():
-    if r["URUN_ADI"] and r["URUN_ADI"].lower() != "nan":
+    if "URUN_ADI" in r and r["URUN_ADI"] and r["URUN_ADI"].lower() != "nan":
         urun_listesi.append(r["URUN_ADI"].upper())
 
 if not urun_listesi:
     urun_listesi = ["0.50 LT PET SU", "1.50 LT PET SU", "5.00 LT PET SU", "19 LT DAMACANA"]
 
 # Akıllı Sıralama Mantığı (Boştakiler Üste, Atananlar Alta)
-if not df_sevkiyatlar.empty:
+if not df_sevkiyatlar.empty and "PLAKA" in df_sevkiyatlar.columns:
     df_sevkiyatlar['PLAKA_KONTROL'] = df_sevkiyatlar['PLAKA'].apply(lambda x: 0 if str(x).strip() == "" else 1)
     df_sevkiyatlar = df_sevkiyatlar.sort_values(by=['PLAKA_KONTROL']).reset_index(drop=True)
     df_sevkiyatlar = df_sevkiyatlar.drop(columns=['PLAKA_KONTROL'])
 
 def satir_boya(row):
-    if str(row["PLAKA"]).strip() == "":
+    plaka_val = str(row["PLAKA"]).strip() if "PLAKA" in row else ""
+    if plaka_val == "":
         return ['background-color: #fef7e0; color: #b06000; font-weight: bold;'] * len(row)
     else:
         return ['background-color: #e6f4ea; color: #137333; font-weight: 600;'] * len(row)
@@ -125,8 +144,7 @@ else:
                 if st.form_submit_button("➕ Şoförü Kaydet"):
                     if y_sh_adi and y_sh_plaka:
                         temiz_plaka = y_sh_plaka.strip().upper()
-                        # Plaka veya isim kontrolü
-                        if not df_soforler.empty and temiz_plaka in df_soforler["PLAKA"].values:
+                        if not df_soforler.empty and "PLAKA" in df_soforler.columns and temiz_plaka in df_soforler["PLAKA"].values:
                             st.error(f"⚠️ Bu plaka ({temiz_plaka}) zaten kayıtlı!")
                         else:
                             if tabloya_yaz("Soforler", [y_sh_adi.strip(), temiz_plaka]):
@@ -142,8 +160,7 @@ else:
                     if y_m_adi and y_g_yer:
                         temiz_musteri = y_m_adi.strip()
                         temiz_depo = y_g_yer.strip()
-                        # Bayi/Müşteri adı kontrolü
-                        if not df_depolar.empty and temiz_musteri in df_depolar["MUSTERI_ADI"].values:
+                        if not df_depolar.empty and "MUSTERI_ADI" in df_depolar.columns and temiz_musteri in df_depolar["MUSTERI_ADI"].values:
                             st.error(f"⚠️ Bu müşteri/bayi zaten kayıtlı!")
                         else:
                             if tabloya_yaz("Depolar", [temiz_musteri, temiz_depo]):
@@ -157,7 +174,7 @@ else:
                 if st.form_submit_button("➕ Ürünü Kaydet"):
                     if y_ur_adi:
                         temiz_urun = y_ur_adi.strip().upper()
-                        if not df_urunler.empty and temiz_urun in df_urunler["URUN_ADI"].values:
+                        if not df_urunler.empty and "URUN_ADI" in df_urunler.columns and temiz_urun in df_urunler["URUN_ADI"].values:
                             st.error("⚠️ Bu ürün zaten kayıtlı!")
                         else:
                             if tabloya_yaz("Urunler", [temiz_urun]):
@@ -208,7 +225,7 @@ else:
         with col_g1:
             if st.button("🗑️ Sadece 'PLAKA ATANDI' Olanları Listeden Temizle"):
                 for i, r in df_sevkiyatlar.iterrows():
-                    if str(r["DURUM"]).strip() == "PLAKA ATANDI":
+                    if "DURUM" in r and str(r["DURUM"]).strip() == "PLAKA ATANDI":
                         tabloya_yaz("Sevkiyatlar", [], aksiyon="SIL", aranan_deger=str(r["SIRA_NO"]), aranan_sutun="SIRA_NO")
                 st.success("Atanan tüm işler temizlendi!")
                 st.rerun()
@@ -241,8 +258,11 @@ else:
         # ✍️ BOŞTAKİ İŞE PLAKA / ŞOFÖR ATA
         st.divider()
         st.subheader("✍️ Boştaki İşe Plaka / Şoför Ata")
-        bostaki_isler_df = df_sevkiyatlar[(df_sevkiyatlar["DURUM"] == "BEKLİYOR (BOŞTA)") | (df_sevkiyatlar["PLAKA"] == "")]
-        bostaki_isler_df = bostaki_isler_df[bostaki_isler_df["PLAKA"] == ""]
+        if "DURUM" in df_sevkiyatlar.columns and "PLAKA" in df_sevkiyatlar.columns:
+            bostaki_isler_df = df_sevkiyatlar[(df_sevkiyatlar["DURUM"] == "BEKLİYOR (BOŞTA)") | (df_sevkiyatlar["PLAKA"] == "")]
+            bostaki_isler_df = bostaki_isler_df[bostaki_isler_df["PLAKA"] == ""].copy()
+        else:
+            bostaki_isler_df = pd.DataFrame()
         
         if not bostaki_isler_df.empty:
             bostaki_secenekler = [f"{r['MÜŞTERİ']} ({r['DEPO']}) -> {r['ÜRÜNLER']}" for i, r in bostaki_isler_df.iterrows()]
@@ -268,8 +288,9 @@ else:
         if not df_sevkiyatlar.empty and df_sevkiyatlar.shape[0] > 0:
             tum_isler_secenekler = []
             for i, r in df_sevkiyatlar.iterrows():
-                durum_emoji = "✅" if r['PLAKA'] != "" else "⏳"
-                plaka_notu = f" [{r['PLAKA']}]" if r['PLAKA'] else " [BOŞTA]"
+                plaka_val = r['PLAKA'] if "PLAKA" in r else ""
+                durum_emoji = "✅" if plaka_val != "" else "⏳"
+                plaka_notu = f" [{plaka_val}]" if plaka_val else " [BOŞTA]"
                 tum_isler_secenekler.append(f"{durum_emoji} {r['MÜŞTERİ']} ({r['DEPO']}){plaka_notu}")
                 
             secilen_duzenlenecek = st.selectbox("Düzeltme Yapılacak İş Emrini Seçin:", tum_isler_secenekler)
@@ -285,7 +306,7 @@ else:
                     yeni_urunler_metni = st.text_input("Yüklü Ürünler:", value=str(mevcut_satir["ÜRÜNLER"]))
                     yeni_plaka = st.text_input("Atanan Plaka (Boş bırakırsanız boşa çıkar):", value=str(mevcut_satir["PLAKA"]))
                 
-                if st.form_submit_button("💾 Değişiklikleri Kaydet ve Listeyi Güncelle"):
+                if st.form_submit_button("💾 Değişiklikleri Kaydet leaning"):
                     y_durum = "BEKLİYOR (BOŞTA)" if yeni_plaka.strip() == "" else "PLAKA ATANDI"
                     if tabloya_yaz("Sevkiyatlar", [str(mevcut_satir["SIRA_NO"]), yeni_musteri, yeni_depo, yeni_urunler_metni, yeni_plaka.strip(), y_durum], aksiyon="GUNCELLE", aranan_deger=str(mevcut_satir["SIRA_NO"]), aranan_sutun="SIRA_NO"):
                         st.success("İş emri başarıyla güncellendi!")
