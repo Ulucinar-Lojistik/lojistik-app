@@ -26,10 +26,11 @@ def tabloyu_oku(sekme_adi):
 if 'aksiyon_tetik' not in st.session_state:
     st.session_state.aksiyon_tetik = 0
 
-# Tablolardan verileri çek
+# Tablolardan verileri çek (Yeni Urunler sekmesi dahil)
 df_sevkiyatlar = tabloyu_oku("Sevkiyatlar")
 df_soforler = tabloyu_oku("Soforler")
 df_depolar = tabloyu_oku("Depolar")
+df_urunler = tabloyu_oku("Urunler")
 
 # Boşsa kalıpları oluştur
 if df_sevkiyatlar.empty:
@@ -38,6 +39,8 @@ if df_soforler.empty:
     df_soforler = pd.DataFrame(columns=["SOFOR_ADI", "PLAKA"])
 if df_depolar.empty:
     df_depolar = pd.DataFrame(columns=["MUSTERI_ADI", "GIDECEGI_YER"])
+if df_urunler.empty:
+    df_urunler = pd.DataFrame(columns=["URUN_ADI"])
 
 # Session State Hafızasını Senkronize Et
 if 'sevkiyatlar' not in st.session_state or st.session_state.aksiyon_tetik == 0:
@@ -46,9 +49,9 @@ if 'soforler_list' not in st.session_state or st.session_state.aksiyon_tetik == 
     st.session_state.soforler_list = df_soforler
 if 'depolar_list' not in st.session_state or st.session_state.aksiyon_tetik == 0:
     st.session_state.depolar_list = df_depolar
+if 'urunler_list' not in st.session_state or st.session_state.aksiyon_tetik == 0:
+    st.session_state.urunler_list = df_urunler
 
-if 'urun_listesi' not in st.session_state:
-    st.session_state.urun_listesi = ["0.50 LT PET SU", "1.50 LT PET SU", "5.00 LT PET SU", "19 LT DAMACANA"]
 if 'mesaj_genel' not in st.session_state: st.session_state.mesaj_genel = ""
 
 # Listeleri güncelle
@@ -61,6 +64,15 @@ depo_listesi = []
 for _, r in st.session_state.depolar_list.iterrows():
     if pd.notna(r["MUSTERI_ADI"]) and pd.notna(r["GIDECEGI_YER"]):
         depo_listesi.append(f"{r['MUSTERI_ADI']} - {r['GIDECEGI_YER']}")
+
+urun_listesi = []
+for _, r in st.session_state.urunler_list.iterrows():
+    if pd.notna(r["URUN_ADI"]):
+        urun_listesi.append(str(r["URUN_ADI"]).strip().upper())
+
+# Eğer e-tabloda ürün yoksa sistem çökmesin diye varsayılanlar:
+if not urun_listesi:
+    urun_listesi = ["0.50 LT PET SU", "1.50 LT PET SU", "5.00 LT PET SU", "19 LT DAMACANA"]
 
 # Akıllı Sıralama Mantığı
 if not st.session_state.sevkiyatlar.empty:
@@ -96,37 +108,49 @@ else:
         st.success("Giriş Başarılı. Tüm yönetim araçları aşağıdadır.")
         if st.session_state.mesaj_genel: st.success(st.session_state.mesaj_genel); st.session_state.mesaj_genel = ""
 
-        # 🌟 TEK SAYFADA YENİ ŞOFÖR VE DEPO EKLEME ALANI (İSTEDİĞİN YER)
+        # 📋 TEK SAYFADA TÜM EKLEME ALANLARI (Şoför, Depo ve Kalıcı Ürün)
         st.divider()
-        st.subheader("📋 Sabit Tanımlamalar (Şoför / Depo Kaydet)")
-        st.caption("Buraya eklediğin şoför ve depolar anında aşağıdaki seçim listelerine düşer.")
+        st.subheader("📋 Sabit Tanımlamalar (Şoför / Depo / Ürün Kaydet)")
+        st.caption("Buraya eklediğin tüm bilgiler anında aşağıdaki iş emri ve plaka atama listelerine kalıcı olarak yansır.")
         
-        col_tanim1, col_tanim2 = st.columns(2)
+        col_tanim1, col_tanim2, col_tanim3 = st.columns(3)
         
         with col_tanim1:
             st.markdown("**🚚 Yeni Şoför & Plaka Ekle**")
             with st.form("sh_form", clear_on_submit=True):
                 y_sh_adi = st.text_input("Şoför Adı Soyadı:")
                 y_sh_plaka = st.text_input("Araç Plakası:")
-                if st.form_submit_button("➕ Şoförü Sisteme Kaydet"):
+                if st.form_submit_button("➕ Şoförü Kaydet"):
                     if y_sh_adi and y_sh_plaka:
                         yeni_sh_row = pd.DataFrame([{"SOFOR_ADI": y_sh_adi, "PLAKA": y_sh_plaka}])
                         st.session_state.soforler_list = pd.concat([st.session_state.soforler_list, yeni_sh_row], ignore_index=True)
                         st.session_state.aksiyon_tetik += 1
-                        st.success(f"{y_sh_adi} şoför listesine eklendi!")
+                        st.success(f"{y_sh_adi} eklendi!")
                         st.rerun()
                         
         with col_tanim2:
             st.markdown("**🏢 Yeni Müşteri & Depo Ekle**")
             with st.form("dp_form", clear_on_submit=True):
                 y_m_adi = st.text_input("Müşteri Adı (Örn: BİM, A101):")
-                y_g_yer = st.text_input("Gideceği Yer / Depo (Örn: KONYA):")
-                if st.form_submit_button("➕ Depoyu Sisteme Kaydet"):
+                y_g_yer = st.text_input("Depo / Gideceği Yer:")
+                if st.form_submit_button("➕ Depoyu Kaydet"):
                     if y_m_adi and y_g_yer:
                         yeni_dp_row = pd.DataFrame([{"MUSTERI_ADI": y_m_adi, "GIDECEGI_YER": y_g_yer}])
                         st.session_state.depolar_list = pd.concat([st.session_state.depolar_list, yeni_dp_row], ignore_index=True)
                         st.session_state.aksiyon_tetik += 1
-                        st.success(f"{y_m_adi} - {y_g_yer} depo listesine eklendi!")
+                        st.success(f"{y_m_adi} - {y_g_yer} eklendi!")
+                        st.rerun()
+
+        with col_tanim3:
+            st.markdown("**📦 Yeni Ürün Çeşidi Ekle (Kalıcı)**")
+            with st.form("ur_form", clear_on_submit=True):
+                y_ur_adi = st.text_input("Ürün Adı (Örn: 0.33 LT PET SU):")
+                if st.form_submit_button("➕ Ürünü Kaydet"):
+                    if y_ur_adi and y_ur_adi.upper() not in urun_listesi:
+                        yeni_ur_row = pd.DataFrame([{"URUN_ADI": y_ur_adi.upper()}])
+                        st.session_state.urunler_list = pd.concat([st.session_state.urunler_list, yeni_ur_row], ignore_index=True)
+                        st.session_state.aksiyon_tetik += 1
+                        st.success(f"{y_ur_adi.upper()} başarıyla kalıcı listeye eklendi!")
                         st.rerun()
 
         # 🧹 GÜN SONU VE İŞ TEMİZLEME PANELİ
@@ -200,7 +224,7 @@ else:
             with c1: 
                 secilen_yer = st.selectbox("Müşteri & Depo Seç:", depo_listesi if depo_listesi else ["Önce yukarıdan depo ekleyin"])
             with c2: 
-                secilen_urunler = st.multiselect("Yüklenecek Ürünleri Seçin:", st.session_state.urun_listesi)
+                secilen_urunler = st.multiselect("Yüklenecek Ürünleri Seçin:", urun_listesi)
             
             if st.form_submit_button("🚀 Veriyi Havuza Gönder (Turuncu Yap)"):
                 if secilen_yer and secilen_urunler and "Önce" not in secilen_yer:
