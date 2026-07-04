@@ -7,7 +7,7 @@ import json
 st.set_page_config(layout="wide", page_title="Lojistik Çift Girişli İş Takip Sistemi")
 
 # ⚠️ BURAYA KENDİ YENİ APPS SCRIPT URL'Nİ YAPIŞTIR
-SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYVCD0lLeo1l21CTaYw5RyXlUJIN168zsxvQD2Fx1RAJ5qQXGiobTcGNnqhyTnhHCaCg/exec"
+SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzh13LuC19Y-4vzTldvQYnJc-Qs1P_y02Yk7wU_-d6sC7kMYp5poEzkpaDftEFJVx05ZQ/exec"
 
 # Sabit Seçenek Verileri
 MUSTERI_DEPO_LISTESI = [
