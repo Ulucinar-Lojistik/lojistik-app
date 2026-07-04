@@ -69,7 +69,7 @@ if 'sevkiyatlar' not in st.session_state:
 # --- PANEL ARAYÜZÜ ---
 st.title("🚚 SEVKİYAT TAKİP VE AKTİF İŞ HAVUZU")
 
-# EĞER VEİR BOŞSA BİLE SÜTUNLARI GARANTİ ALTINA AL (KeyError Engelleyici)
+# EĞER VERİ BOŞSA BİLE SÜTUNLARI GARANTİ ALTINA AL (KeyError Engelleyici)
 df_aktif = st.session_state.sevkiyatlar.copy()
 for col in ["MÜŞTERİ", "DEPO", "ÜRÜNLER", "PLAKA", "DURUM"]:
     if col not in df_aktif.columns:
@@ -128,7 +128,7 @@ if st.button("🚀 Veriyi Havuza Gönder (Turuncu Yap)"):
 
 st.markdown("---")
 
-# --- 📝 3. PLAKA / ŞOFÖR ATA ---
+# --- ✍️ 3. PLAKA / ŞOFÖR ATA ---
 st.subheader("✍️ Boştaki İşe Plaka / Şoför Ata")
 if gercek_kayit_var:
     bosta_olanlar = df_aktif[df_aktif['PLAKA_KONTROL'] == 0]
@@ -207,3 +207,34 @@ if gercek_kayit_var:
                 st.rerun()
 else:
     st.info("Düzenlenecek herhangi bir aktif iş emri bulunmuyor.")
+
+st.markdown("---")
+
+# --- 🗑️ 5. İŞ EMRİ SİL PANELİ ---
+st.subheader("🗑️ İş Emrini Tamamen Sil")
+if gercek_kayit_var:
+    silme_secenekleri = []
+    s_idx_haritasi = {}
+    for idx, r in df_aktif.iterrows():
+        s_gosterim = f"Sıra {idx+1}: {r['MÜŞTERİ']} - {r['DEPO']} -> {r['ÜRÜNLER']}"
+        silme_secenekleri.append(s_gosterim)
+        s_idx_haritasi[s_gosterim] = idx
+        
+    secilen_silme = st.selectbox("Silinecek İş Emrini Seçin:", silme_secenekleri, key="silme_box")
+    
+    if st.button("🚨 Seçili İş Emrini Sistemden Sil"):
+        gercek_s_idx = s_idx_haritasi[secilen_silme]
+        silinecek_urun = str(df_aktif.loc[gercek_s_idx, "ÜRÜNLER"])
+        
+        # Sadece arama kriterini doldurmak silmek için yeterli (Apps Script satırı tamamen siler)
+        silinecek_satir = ["", "", silinecek_urun, "", ""]
+        
+        with st.spinner("İş emri siliniyor..."):
+            if veri_gonder("SIL", silinecek_satir, search_key=silinecek_urun, search_column="ÜRÜNLER"):
+                st.success("İş emri başarıyla sistemden silindi!")
+                st.session_state.sevkiyatlar = veri_cek()
+                st.rerun()
+            else:
+                st.error("Silme işlemi sırasında Google Sheets bağlantı hatası oluştu.")
+else:
+    st.info("Sistemde silinecek herhangi bir iş emri bulunmuyor.")
