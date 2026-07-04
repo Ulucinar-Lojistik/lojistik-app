@@ -29,22 +29,29 @@ SOFOR_ARAC_LISTESI = [
 
 # Google Sheets'ten Veri Çekme Fonksiyonu
 def veri_cek():
-    try:
-        response = requests.get(SCRIPT_URL + "?sheetName=Sayfa1", timeout=10)
-        if response.status_code == 200:
-            veri = response.json()
-            if veri and len(veri) > 0:
-                df = pd.DataFrame(veri)
-                df.columns = [str(c).strip().upper() for c in df.columns]
-                return df
-    except:
-        pass
+    # Sayfa1 veya farklı adlandırılmış sekmeleri sırayla dener
+    for sekme in ["Sayfa1", "Sevkiyatlar", "Sheet1"]:
+        try:
+            response = requests.get(f"{SCRIPT_URL}?sheetName={sekme}", timeout=10)
+            if response.status_code == 200:
+                veri = response.json()
+                if veri and isinstance(veri, list) and len(veri) > 0:
+                    df = pd.DataFrame(veri)
+                    # Sütun başlıklarını temizle ve büyütebildiğini büyüt
+                    df.columns = [str(c).strip().upper() for c in df.columns]
+                    # Gerekli ana sütunlar var mı kontrol et
+                    if "MÜŞTERİ" in df.columns:
+                        st.session_state["aktif_sekme"] = sekme
+                        return df
+        except:
+            continue
     return pd.DataFrame(columns=["MÜŞTERİ", "DEPO", "ÜRÜNLER", "PLAKA", "DURUM"])
 
 # Google Sheets'e Veri Gönderme Fonksiyonu
 def veri_gonder(action, row_data, search_key=None, search_column=None):
+    sekme = st.session_state.get("aktif_sekme", "Sayfa1")
     payload = {
-        "sheetName": "Sayfa1",
+        "sheetName": sekme,
         "action": action,
         "rowData": row_data,
         "searchKey": search_key,
@@ -65,19 +72,16 @@ st.title("🚚 SEVKİYAT TAKİP VE AKTİF İŞ HAVUZU")
 
 # Tabloyu Temizle ve Hazırla
 if not st.session_state.sevkiyatlar.empty:
-    # Sütun kontrolü ve zorunlu veri tipi dönüşümü (Metne Sabitleme)
     for col in ["MÜŞTERİ", "DEPO", "ÜRÜNLER", "PLAKA", "DURUM"]:
         if col in st.session_state.sevkiyatlar.columns:
             st.session_state.sevkiyatlar[col] = st.session_state.sevkiyatlar[col].fillna("").astype(str).str.strip()
         else:
             st.session_state.sevkiyatlar[col] = ""
 
-    # PLAKA_KONTROL sütununu hatasız oluşturma
     st.session_state.sevkiyatlar['PLAKA_KONTROL'] = st.session_state.sevkiyatlar['PLAKA'].apply(
         lambda x: 0 if str(x) == "" or str(x).lower() == "nan" or str(x).strip() == "" else 1
     )
 
-    # Renklendirme Kuralları
     def satir_renklendir(row):
         try:
             if str(row.get('DURUM', '')).upper() == 'PLAKA ATANDI':
@@ -90,7 +94,7 @@ if not st.session_state.sevkiyatlar.empty:
     gosterilecek_df = st.session_state.sevkiyatlar[["MÜŞTERİ", "DEPO", "ÜRÜNLER", "PLAKA", "DURUM"]]
     st.dataframe(gosterilecek_df.style.apply(satir_renklendir, axis=1), use_container_width=True)
 else:
-    st.info("Şu anda aktif iş havuzu boş. Lütfen aşağıdan yeni iş emri ekleyin.")
+    st.info("Şu anda aktif iş havuzu boş veya e-tablodan veri okunamadı. Lütfen aşağıdan yeni iş emri ekleyin.")
 
 st.markdown("---")
 
@@ -120,7 +124,7 @@ if st.button("🚀 Veriyi Havuza Gönder (Turuncu Yap)"):
                 st.session_state.sevkiyatlar = veri_cek()
                 st.rerun()
             else:
-                st.error("Google Sheets'e yazılamadı. Lütfen Apps Script izinlerini kontrol edin.")
+                st.error("Google Sheets'e yazılamadı. Bağlantıyı kontrol edin.")
 
 st.markdown("---")
 
@@ -149,12 +153,9 @@ if not st.session_state.sevkiyatlar.empty and 'PLAKA_KONTROL' in st.session_stat
             gercek_idx = idx_haritasi[secilen_is]
             plaka_ayikla = secilen_arac.split("(")[-1].replace(")", "").strip()
             
-            # --- 202. SATIRDAKİ STR/OBJECT HATA KORUMASI ---
-            # DataFrame'in ilgili sütununu seriye/object tipine tamamen güvenli şekilde zorluyoruz
             st.session_state.sevkiyatlar["PLAKA"] = st.session_state.sevkiyatlar["PLAKA"].astype(str)
             st.session_state.sevkiyatlar["DURUM"] = st.session_state.sevkiyatlar["DURUM"].astype(str)
             
-            # Atama işlemini doğrudan python seviyesinde gerçekleştiriyoruz
             st.session_state.sevkiyatlar.loc[gercek_idx, "PLAKA"] = str(plaka_ayikla)
             st.session_state.sevkiyatlar.loc[gercek_idx, "DURUM"] = "PLAKA ATANDI"
             
