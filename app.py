@@ -6,7 +6,7 @@ import json
 # Sayfa Genişlik Ayarı
 st.set_page_config(layout="wide", page_title="Lojistik Çift Girişli İş Takip Sistemi")
 
-# ⚠️ BURAYA KENDİ YENİ APPS SCRIPT URL'Nİ YAPIŞTIR
+# Güncel ve Çalışan Google Apps Script URL'niz
 SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzh13LuC19Y-4vzTldvQYnJc-Qs1P_y02Yk7wU_-d6sC7kMYp5poEzkpaDftEFJVx05ZQ/exec"
 
 # Sabit Seçenek Verileri
@@ -63,7 +63,7 @@ if 'sevkiyatlar' not in st.session_state:
 
 st.title("🚚 SEVKİYAT TAKİP VE AKTİF İŞ HAVUZU")
 
-# Sütun Güvenliği
+# Sütun Güvenliği (KeyError çökmelerini tamamen önler)
 df_aktif = st.session_state.sevkiyatlar.copy()
 for col in ["MÜŞTERİ", "DEPO", "ÜRÜNLER", "PLAKA", "DURUM"]:
     if col not in df_aktif.columns:
@@ -72,7 +72,7 @@ for col in ["MÜŞTERİ", "DEPO", "ÜRÜNLER", "PLAKA", "DURUM"]:
 
 gercek_kayit_var = len(df_aktif) > 0 and df_aktif.iloc[0]["MÜŞTERİ"] != ""
 
-# --- 📊 İZLEME PANELİ ---
+# --- 📊 1. ANLIK DURUM TABLOSU PANELİ ---
 if gercek_kayit_var:
     def satir_renklendir(row):
         if str(row.get('DURUM', '')).upper() == 'PLAKA ATANDI':
@@ -81,13 +81,14 @@ if gercek_kayit_var:
             return ['background-color: #fff3cd; color: #856404; font-weight: bold;'] * len(row)
     st.dataframe(df_aktif[["MÜŞTERİ", "DEPO", "ÜRÜNLER", "PLAKA", "DURUM"]].style.apply(satir_renklendir, axis=1), use_container_width=True)
 else:
-    st.info("Havuz şu anda boş.")
+    st.info("Aktif iş havuzu şu anda boş. Aşağıdaki sekmelerden işlem yapabilirsiniz.")
 
 st.markdown("---")
 
-# --- 👥 ÇİFT GİRİŞLİ SEKMELER ---
+# --- 👥 2. ÇİFT GİRİŞLİ SEKMELER ---
 sekme1, sekme2 = st.tabs(["➕ YENİ SİPARİŞ GİRİŞİ", "🛠️ LOJİSTİK / ATAMA VE DÜZELTME"])
 
+# 🏢 SEKME 1: YENİ SİPARİŞ GİRİŞİ PANELİ
 with sekme1:
     st.subheader("📝 Günlük Yeni Sipariş Emri Ekle")
     col1, col2 = st.columns(2)
@@ -98,15 +99,24 @@ with sekme1:
         
     if st.button("🚀 Siparişi Havuza Gönder (Turuncu Yap)", key="btn_siparis"):
         if not secilen_urunler:
-            st.error("Lütfen ürün seçin!")
+            st.error("Lütfen en az bir ürün seçin!")
         else:
             parcalar = secilen_secenek.split(" - ")
-            yeni_satir = [parcalar[0], parcalar[1] if len(parcalar)>1 else parcalar[0], ", ".join(secilen_urunler), "", "BEKLİYOR (BOŞTA)"]
-            if veri_gonder("EKLE", yeni_satir):
-                st.success("Sipariş başarıyla gönderildi!")
-                st.session_state.sevkiyatlar = veri_cek()
-                st.rerun()
+            musteri = parcalar[0]
+            depo = parcalar[1] if len(parcalar) > 1 else parcalar[0]
+            urunler_str = ", ".join(secilen_urunler)
+            
+            yeni_satir = [musteri, depo, urunler_str, "", "BEKLİYOR (BOŞTA)"]
+            
+            with st.spinner("Sipariş sisteme kaydediliyor..."):
+                if veri_gonder("EKLE", yeni_satir):
+                    st.success("Sipariş başarıyla havuza gönderildi!")
+                    st.session_state.sevkiyatlar = veri_cek()
+                    st.rerun()
+                else:
+                    st.error("Kayıt başarısız. Bağlantıyı kontrol edin.")
 
+# 🔧 SEKME 2: LOJİSTİK / ATAMA, DÜZELTME VE SİLME PANELİ
 with sekme2:
     st.subheader("✍️ Boştaki İşe Plaka / Şoför Ata")
     bosta_olanlar = df_aktif[df_aktif['PLAKA'] == ""] if gercek_kayit_var else pd.DataFrame()
@@ -124,15 +134,28 @@ with sekme2:
         if st.button("✅ Plakayı Güncelle (Satırı Yeşile Döndür)", key="btn_plaka"):
             g_idx = idx_haritasi[secilen_is]
             plaka = secilen_arac.split("(")[-1].replace(")", "").strip()
-            guncel_satir = [df_aktif.loc[g_idx, "MÜŞTERİ"], df_aktif.loc[g_idx, "DEPO"], df_aktif.loc[g_idx, "ÜRÜNLER"], plaka, "PLAKA ATANDI"]
-            if veri_gonder("GUNCELLE", guncel_satir, search_key=df_aktif.loc[g_idx, "ÜRÜNLER"]):
-                st.success("Plaka başarıyla atandı!")
-                st.session_state.sevkiyatlar = veri_cek()
-                st.rerun()
+            
+            guncel_satir = [
+                str(df_aktif.loc[g_idx, "MÜŞTERİ"]), 
+                str(df_aktif.loc[g_idx, "DEPO"]), 
+                str(df_aktif.loc[g_idx, "ÜRÜNLER"]), 
+                str(plaka), 
+                "PLAKA ATANDI"
+            ]
+            
+            with st.spinner("Plaka atanıyor..."):
+                if veri_gonder("GUNCELLE", guncel_satir, search_key=df_aktif.loc[g_idx, "ÜRÜNLER"]):
+                    st.success("Plaka başarıyla atandı!")
+                    st.session_state.sevkiyatlar = veri_cek()
+                    st.rerun()
+                else:
+                    st.error("Plaka güncellenirken bir hata oluştu.")
     else:
-        st.info("Atama bekleyen iş yok.")
+        st.info("Atama bekleyen boşta iş emri bulunmuyor.")
         
     st.markdown("---")
+    
+    # 📝 AKTİF İŞ EMRİNİ DÜZENLE / DÜZELT PANELİ
     st.subheader("📝 Aktif İş Emrini Düzenle / Düzelt")
     if gercek_kayit_var:
         duzenleme_secenekleri = [f"Sıra {idx+1}: {r['MÜŞTERİ']} ({r['DURUM']})" for idx, r in df_aktif.iterrows()]
@@ -151,7 +174,37 @@ with sekme2:
         if st.button("💾 Değişiklikleri Kaydet", key="btn_kaydet"):
             y_durum = "PLAKA ATANDI" if yeni_p.strip() != "" else "BEKLİYOR (BOŞTA)"
             guncel_satir = [yeni_m, yeni_d, df_aktif.loc[g_d_idx, "ÜRÜNLER"], yeni_p, y_durum]
-            if veri_gonder("GUNCELLE", guncel_satir, search_key=df_aktif.loc[g_d_idx, "ÜRÜNLER"]):
-                st.success("Başarıyla güncellendi!")
-                st.session_state.sevkiyatlar = veri_cek()
-                st.rerun()
+            
+            with st.spinner("Düzenlemeler kaydediliyor..."):
+                if veri_gonder("GUNCELLE", guncel_satir, search_key=df_aktif.loc[g_d_idx, "ÜRÜNLER"]):
+                    st.success("İş emri başarıyla güncellendi!")
+                    st.session_state.sevkiyatlar = veri_cek()
+                    st.rerun()
+                else:
+                    st.error("Güncelleme başarısız oldu.")
+    else:
+        st.info("Düzenlenecek herhangi bir aktif kayıt bulunmuyor.")
+
+    st.markdown("---")
+
+    # 🗑️ İŞ EMRİNİ TAMAMEN SİL PANELİ (Geri Getirilen Kısım)
+    st.subheader("🗑️ İş Emrini Sistemden Tamamen Sil")
+    if gercek_kayit_var:
+        silme_secenekleri = [f"Sıra {idx+1}: {r['MÜŞTERİ']} -> {r['ÜRÜNLER']}" for idx, r in df_aktif.iterrows()]
+        s_idx_haritasi = {f"Sıra {idx+1}: {r['MÜŞTERİ']} -> {r['ÜRÜNLER']}": idx for idx, r in df_aktif.iterrows()}
+        secilen_silme = st.selectbox("Silinecek İş Emrini Seçin:", silme_secenekleri, key="s_silme_box")
+        
+        if st.button("🚨 Seçili İş Emrini Kalıcı Olarak Sil", key="btn_sil_is"):
+            g_s_idx = s_idx_haritasi[secilen_silme]
+            silinecek_urun = str(df_aktif.loc[g_s_idx, "ÜRÜNLER"])
+            silinecek_satir = ["", "", silinecek_urun, "", ""]
+            
+            with st.spinner("İş emri siliniyor..."):
+                if veri_gonder("SIL", silinecek_satir, search_key=silinecek_urun):
+                    st.success("İş emri e-tablodan ve sistemden tamamen silindi!")
+                    st.session_state.sevkiyatlar = veri_cek()
+                    st.rerun()
+                else:
+                    st.error("Silme işlemi gerçekleştirilemedi.")
+    else:
+        st.info("Sistemde silinecek herhangi bir iş emri bulunmuyor.")
