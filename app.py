@@ -30,7 +30,8 @@ SOFOR_ARAC_LISTESI = [
 # Google Sheets'ten Veri Çekme Fonksiyonu
 def veri_cek():
     try:
-        response = requests.get(SCRIPT_URL + "?sheetName=Sayfa1", timeout=10)
+        # Boş parametreyle veya doğrudan çekmeyi dene
+        response = requests.get(SCRIPT_URL, timeout=10)
         if response.status_code == 200:
             veri = response.json()
             if veri and isinstance(veri, list) and len(veri) > 0:
@@ -38,11 +39,12 @@ def veri_cek():
                 # Başlıkları temizle ve büyük harfe çevir
                 df.columns = [str(c).strip().upper() for c in df.columns]
                 
-                # Eğer e-tablo boşsa veya başlıklar uyuşmuyorsa şablon oluştur
-                if "MÜŞTERİ" not in df.columns:
-                    return pd.DataFrame(columns=["MÜŞTERİ", "DEPO", "ÜRÜNLER", "PLAKA", "DURUM"])
-                return df
-    except:
+                # Eğer gerekli sütunlar varsa DataFrame'i döndür
+                if "MÜŞTERİ" in df.columns or "MÜŞTERI" in df.columns:
+                    # Türkçe karakter uyuşmazlığı ihtimaline karşı sütunları eşitle
+                    df.rename(columns={"MÜŞTERI": "MÜŞTERİ"}, inplace=True)
+                    return df
+    except Exception as e:
         pass
     return pd.DataFrame(columns=["MÜŞTERİ", "DEPO", "ÜRÜNLER", "PLAKA", "DURUM"])
 
@@ -68,24 +70,26 @@ if 'sevkiyatlar' not in st.session_state:
 # --- PANEL ARAYÜZÜ ---
 st.title("🚚 SEVKİYAT TAKİP VE AKTİF İŞ HAVUZU")
 
-# ZORUNLU VERİ TİPİ KORUMASI (KeyError ve TypeError Önleyici)
+# Eğer tablo boş geldiyse şablon sütunları ata ki alt paneller çökmesin
 if st.session_state.sevkiyatlar.empty:
-    # Eğer tablo boşsa boş yapı oluştur ki arayüz çökmesin
     st.session_state.sevkiyatlar = pd.DataFrame(columns=["MÜŞTERİ", "DEPO", "ÜRÜNLER", "PLAKA", "DURUM"])
 
-# Sütunları güvenli hale getir
+# Sütun tiplerini sabitleme ve temizleme
 for col in ["MÜŞTERİ", "DEPO", "ÜRÜNLER", "PLAKA", "DURUM"]:
     if col not in st.session_state.sevkiyatlar.columns:
         st.session_state.sevkiyatlar[col] = ""
     st.session_state.sevkiyatlar[col] = st.session_state.sevkiyatlar[col].fillna("").astype(str).str.strip()
 
-# PLAKA_KONTROL sütununu hatasız hesapla
+# PLAKA_KONTROL sütunu
 st.session_state.sevkiyatlar['PLAKA_KONTROL'] = st.session_state.sevkiyatlar['PLAKA'].apply(
     lambda x: 0 if str(x).strip() == "" or str(x).lower() == "nan" else 1
 )
 
-# Tablo Gösterimi ve Renklendirme
-if len(st.session_state.sevkiyatlar) > 0 and st.session_state.sevkiyatlar.iloc[0]["MÜŞTERİ"] != "":
+# Tablo Gösterim Alanı
+# İlk satırın gerçekten dolu olup olmadığını kontrol et
+gercek_kayit_var_mi = len(st.session_state.sevkiyatlar) > 0 and st.session_state.sevkiyatlar.iloc[0]["MÜŞTERİ"] != ""
+
+if gercek_kayit_var_mi:
     def satir_renklendir(row):
         if str(row.get('DURUM', '')).upper() == 'PLAKA ATANDI':
             return ['background-color: #d4edda; color: #155724; font-weight: bold;'] * len(row)
@@ -130,10 +134,9 @@ st.markdown("---")
 
 # 📝 BÖLÜM 2: PLAKA / ŞOFÖR ATA
 st.subheader("✍️ Boştaki İşe Plaka / Şoför Ata")
-bosta_olanlar = st.session_state.sevkiyatlar[st.session_state.sevkiyatlar['PLAKA_KONTROL'] == 0]
+bosta_olanlar = st.session_state.sevkiyatlar[st.session_state.sevkiyatlar['PLAKA_KONTROL'] == 0] if gercek_kayit_var_mi else pd.DataFrame()
 
-# Eğer ilk satır tamamen boşsa boştadır sayma
-if len(bosta_olanlar) > 0 and bosta_olanlar.iloc[0]["MÜŞTERİ"] != "":
+if not bosta_olanlar.empty and bosta_olanlar.iloc[0]["MÜŞTERİ"] != "":
     is_secenekleri = []
     idx_haritasi = {}
     for idx, r in bosta_olanlar.iterrows():
@@ -173,7 +176,7 @@ st.markdown("---")
 
 # 📝 BÖLÜM 3: AKTİF İŞ EMRİNİ DÜZENLE / DÜZELT
 st.subheader("📝 Aktif İş Emrini Düzenle / Düzelt")
-if len(st.session_state.sevkiyatlar) > 0 and st.session_state.sevkiyatlar.iloc[0]["MÜŞTERİ"] != "":
+if gercek_kayit_var_mi:
     duzenleme_secenekleri = []
     d_idx_haritasi = {}
     for idx, r in st.session_state.sevkiyatlar.iterrows():
