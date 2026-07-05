@@ -77,7 +77,7 @@ rol_secimi = st.sidebar.radio(
 yonetici_izni = False
 if "⚙️ Yönetici Paneli" in rol_secimi:
     sifre = st.sidebar.text_input("Yönetici Şifresi:", type="password", key="yonetici_sifre_key")
-    if sifre == "1234":
+    if sifre == "12345":
         st.sidebar.success("Yönetici Girişi Başarılı.")
         yonetici_izni = True
     elif sifre != "":
