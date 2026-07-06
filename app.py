@@ -165,12 +165,14 @@ if "⚙️ Yönetici Paneli" in rol_secimi and yonetici_izni:
 
     st.markdown("---")
 
-    # --- 🧼 GÜN SONU TEMİZLİĞİ VE İPTAL İŞLEMLERİ ---
-    st.subheader("🧹 Gün Sonu Temizliği & İş Silme")
+    # --- 🧼 GÜN SONU TEMİZLİĞİ VE TEKLİ İŞ SİLME ---
+    st.subheader("🧹 Gün Sonu Temizliği & İş İptal Etme")
     
     col_temiz1, col_temiz2 = st.columns(2)
     
+    # SOL SÜTUN: Tamamlananları toplu temizleme (Burası aynı kalıyor)
     with col_temiz1:
+        st.markdown("**🧼 Tamamlanan İşleri Temizle**")
         if st.button("🧼 Sadece 'PLAKA ATANDI' Olanları Listeden Temizle", key="btn_gun_sonu"):
             if gercek_kayit_var:
                 atananlar = df_aktif[df_aktif['DURUM'].str.upper() == 'PLAKA ATANDI']
@@ -189,25 +191,39 @@ if "⚙️ Yönetici Paneli" in rol_secimi and yonetici_izni:
             else:
                 st.info("Havuzda temizlenecek kayıt yok.")
 
+    # SAĞ SÜTUN: İŞTE YENİ YAPTIĞIMIZ TEKLİ SEÇİP SİLME ALANI
     with col_temiz2:
-        if st.button("🗑️ Boştaki İşleri (BEKLİYOR) Sil", key="btn_bosta_sil"):
-            if gercek_kayit_var:
-                bostakiler = df_aktif[df_aktif['DURUM'].str.contains("BEKLİYOR", na=False)]
-                if not bostakiler.empty:
-                    silinen_sayisi = 0
-                    with st.spinner("Boştaki işler siliniyor..."):
-                        for _, r in bostakiler.iterrows():
-                            silinecek_satir = ["", "", str(r['ÜRÜNLER']), "", ""]
-                            if veri_gonder("SIL", silinecek_satir, search_key=str(r['ÜRÜNLER'])):
-                                silinen_sayisi += 1
-                    st.success(f"{silinen_sayisi} adet boştaki iş havuzdan silindi!")
-                    st.session_state.sevkiyatlar = veri_cek()
-                    st.rerun()
-                else:
-                    st.info("Silinecek boştaki iş bulunamadı.")
-            else:
-                st.info("Havuzda kayıt yok.")
-
+        st.markdown("**❌ İptal Olan Boştaki İşi Tekli Sil**")
+        
+        # Sadece DURUM'u "BEKLİYOR" olan işleri filtreleyip listeliyoruz
+        bostakiler_liste = df_aktif[df_aktif['DURUM'].str.contains("BEKLİYOR", na=False)]
+        
+        if not bostakiler_liste.empty:
+            # Kullanıcının ekranda rahatça görebilmesi için "Müşteri - Ürün" şeklinde seçenek listesi hazırlıyoruz
+            secenekler = [f"{r['MÜŞTERI' if 'MÜŞTERI' in df_aktif.columns else 'MÜŞTERİ']} -> {r['ÜRÜNLER']}" for idx, r in bostakiler_liste.iterrows()]
+            
+            # Seçeneklerin hangi satır indeksine denk geldiğini arkada eşleştiriyoruz
+            secenek_haritasi = {f"{r['MÜŞTERI' if 'MÜŞTERI' in df_aktif.columns else 'MÜŞTERİ']} -> {r['ÜRÜNLER']}": r for idx, r in bostakiler_liste.iterrows()}
+            
+            # Kullanıcı listeden iptal olan işi seçer
+            secilen_iptal_is = st.selectbox("İptal Olan/Silinecek Boştaki İşi Seçin:", secenekler, key="sil_tekli_bosta_sec")
+            
+            if st.button("🗑️ Seçili İşi Havuzdan Sil (İptal Et)", key="btn_bosta_tekli_sil"):
+                # Seçilen işin satır verisini haritadan çekiyoruz
+                iptal_satir = secenek_haritasi[secilen_iptal_is]
+                silinecek_satir = ["", "", str(iptal_satir['ÜRÜNLER']), "", ""]
+                
+                with st.spinner("Seçili iş siliniyor..."):
+                    # Google Sheets'e sadece bu işin ÜRÜNLER anahtarını göndererek sildiriyoruz
+                    if veri_gonder("SIL", silinecek_satir, search_key=str(iptal_satir['ÜRÜNLER'])):
+                        st.success(f"'{secilen_iptal_is}' işi başarıyla havuzdan silindi!")
+                        st.session_state.sevkiyatlar = veri_cek()
+                        st.rerun()
+                    else:
+                        st.error("Silme işlemi sırasında bir hata oluştu.")
+        else:
+            st.info("Havuzda iptal edilebilecek (BEKLİYOR durumunda) boşta iş yok.")
+   
     # --- ➕ GÜNLÜK YENİ İŞ EMRİ EKLE ---
     st.subheader("➕ Günlük Yeni İş Emri Ekle")
     col_e1, col_e2 = st.columns(2)
