@@ -165,6 +165,48 @@ if "⚙️ Yönetici Paneli" in rol_secimi and yonetici_izni:
 
     st.markdown("---")
 
+# --- 🧼 GÜN SONU TEMİZLİĞİ VE İPTAL İŞLEMLERİ ---
+    st.subheader("🧹 Gün Sonu Temizliği & İş Silme")
+    
+    col_temiz1, col_temiz2 = st.columns(2)
+    
+    with col_temiz1:
+        if st.button("🧼 Sadece 'PLAKA ATANDI' Olanları Listeden Temizle", key="btn_gun_sonu"):
+            if gercek_kayit_var:
+                atananlar = df_aktif[df_aktif['DURUM'].str.upper() == 'PLAKA ATANDI']
+                if not atananlar.empty:
+                    silinen_sayisi = 0
+                    with st.spinner("Tamamlanan işler temizleniyor..."):
+                        for _, r in atananlar.iterrows():
+                            silinecek_satir = ["", "", str(r['ÜRÜNLER']), "", ""]
+                            if veri_gonder("SIL", silinecek_satir, search_key=str(r['ÜRÜNLER'])):
+                                silinen_sayisi += 1
+                    st.success(f"Tamamlanmış {silinen_sayisi} adet sevkiyat havuzdan temizlendi!")
+                    st.session_state.sevkiyatlar = veri_cek()
+                    st.rerun()
+                else:
+                    st.info("Temizlenecek 'PLAKA ATANDI' durumunda iş bulunamadı.")
+            else:
+                st.info("Havuzda temizlenecek kayıt yok.")
+
+    with col_temiz2:
+        if st.button("🗑️ Boştaki İşleri (BEKLİYOR) Sil", key="btn_bosta_sil"):
+            if gercek_kayit_var:
+                bostakiler = df_aktif[df_aktif['DURUM'].str.contains("BEKLİYOR", na=False)]
+                if not bostakiler.empty:
+                    silinen_sayisi = 0
+                    with st.spinner("Boştaki işler siliniyor..."):
+                        for _, r in bostakiler.iterrows():
+                            silinecek_satir = ["", "", str(r['ÜRÜNLER']), "", ""]
+                            if veri_gonder("SIL", silinecek_satir, search_key=str(r['ÜRÜNLER'])):
+                                silinen_sayisi += 1
+                    st.success(f"{silinen_sayisi} adet boştaki iş havuzdan silindi!")
+                    st.session_state.sevkiyatlar = veri_cek()
+                    st.rerun()
+                else:
+                    st.info("Silinecek boştaki iş bulunamadı.")
+            else:
+                st.info("Havuzda kayıt yok.")
     # --- 🧼 GÜN SONU TEMİZLİĞİ VE İPTAL İŞLEMLERİ ---
     st.subheader("🧹 Gün Sonu Temizliği & İptal İşlemleri")
     if st.button("🧼 Sadece 'PLAKA ATANDI' Olanları Listeden Temizle", key="btn_gun_sonu"):
