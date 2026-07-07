@@ -50,11 +50,21 @@ if 'musteriler' not in st.session_state:
 if 'urunler' not in st.session_state:
     st.session_state.urunler = ["0.33 LT EURO", "0.33 LT PALEX", "0.5 LT EURO", "0.5 LT PALEX", "1.5 LT EURO", "5 LT", "19 LT PC DAMACANA", "19 LT CAM DAMACANA", "SEPARATÖR KARTON - 5 LT"]
 
+# --- VERİ YÜKLE VE SIRALA ---
 df_aktif = st.session_state.sevkiyatlar.copy()
+
 for col in ["MÜŞTERİ", "DEPO", "ÜRÜNLER", "PLAKA", "DURUM"]:
     if col not in df_aktif.columns:
         df_aktif[col] = ""
     df_aktif[col] = df_aktif[col].fillna("").astype(str).str.strip()
+
+# 🔥 YENİ SIRALAMA: Bekleyenler (BEKLİYOR) her zaman en üstte
+if not df_aktif.empty:
+    # Durum içinde 'BEKLİYOR' geçenlere 0, diğerlerine 1 puanı veriyoruz
+    df_aktif["SIRALAMA_PUANI"] = df_aktif["DURUM"].apply(lambda x: 0 if "BEKLİYOR" in str(x).upper() else 1)
+    
+    # Puanı küçük olan (0 yani Bekliyor) yukarı, sonra müşteri adına göre alfabetik sırala
+    df_aktif = df_aktif.sort_values(by=["SIRALAMA_PUANI", "MÜŞTERİ"]).drop(columns=["SIRALAMA_PUANI"]).reset_index(drop=True)
 
 gercek_kayit_var = len(df_aktif) > 0 and df_aktif.iloc[0]["MÜŞTERİ"] != ""
 
