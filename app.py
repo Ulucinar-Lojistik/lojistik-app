@@ -106,74 +106,70 @@ if "⚙️ Yönetici Paneli" in rol_secimi and yonetici_izni:
     st.header("⚙️ Lojistik Yönetici Kontrol Paneli")
 
     # --- 🏢 SABİT TANIMLAMALAR EKLE ---
-    st.subheader("📋 Sabit Tanımlamaları Ekle")
+    st.subheader("📋 Sabit Tanımlamalar Ekle")
     col_t1, col_t2, col_t3 = st.columns(3)
     
     with col_t1:
-        st.markdown("**🚚 Yeni Şoför & Plaka Ekle**")
-        y_sof_ad_in = st.text_input("Şoför Adı:", key="k_sof_ad")
-        y_sof_plk_in = st.text_input("Plaka:", key="k_sof_plk")
-        if st.button("➕ Şoförü Kaydet", key="btn_k_sof"):
-            if y_sof_ad_in and y_sof_plk_in:
-                formatli = f"{y_sof_ad_in} ({y_sof_plk_in})"
+        st.markdown("**🚚 Yeni Şoför & Plaka**")
+        yeni_s_ad = st.text_input("Şoför Adı:", key="EKLE_SOFOR_AD")
+        yeni_s_plk = st.text_input("Plaka:", key="EKLE_SOFOR_PLK")
+        if st.button("➕ Şoförü Kaydet", key="BTN_EKLE_SOFOR"):
+            if yeni_s_ad and yeni_s_plk:
+                formatli = f"{yeni_s_ad} ({yeni_s_plk})"
                 if formatli not in st.session_state.soforler:
                     st.session_state.soforler.append(formatli)
                     st.success("✅ Eklendi!")
-                    st.session_state.k_sof_ad = ""
-                    st.session_state.k_sof_plk = ""
+                    st.session_state.EKLE_SOFOR_AD = ""
+                    st.session_state.EKLE_SOFOR_PLK = ""
                     st.rerun()
-                else: st.warning("Zaten mevcut.")
-                
+
     with col_t2:
-        st.markdown("**🗺️ Yeni Müşteri & Depo Ekle**")
-        y_mus_ad_in = st.text_input("Müşteri Adı:", key="k_mus_ad")
-        y_dep_ad_in = st.text_input("Depo:", key="k_dep_ad")
-        if st.button("➕ Depoyu Kaydet", key="btn_k_mus"):
-            if y_mus_ad_in and y_dep_ad_in:
-                formatli = f"{y_mus_ad_in} - {y_dep_ad_in}"
+        st.markdown("**🗺️ Yeni Müşteri & Depo**")
+        yeni_m_ad = st.text_input("Müşteri Adı:", key="EKLE_MUS_AD")
+        yeni_d_ad = st.text_input("Depo Adı:", key="EKLE_DEP_AD")
+        if st.button("➕ Depoyu Kaydet", key="BTN_EKLE_DEPO"):
+            if yeni_m_ad and yeni_d_ad:
+                formatli = f"{yeni_m_ad} - {yeni_d_ad}"
                 if formatli not in st.session_state.musteriler:
                     st.session_state.musteriler.append(formatli)
                     st.success("✅ Eklendi!")
-                    st.session_state.k_mus_ad = ""
-                    st.session_state.k_dep_ad = ""
+                    st.session_state.EKLE_MUS_AD = ""
+                    st.session_state.EKLE_DEP_AD = ""
                     st.rerun()
-                else: st.warning("Zaten mevcut.")
 
     with col_t3:
         st.markdown("**📦 Yeni Ürün Ekle**")
-        y_urn_ad_in = st.text_input("Ürün Adı:", key="k_urn_ad")
-        if st.button("➕ Ürünü Kaydet", key="btn_k_urn"):
-            if y_urn_ad_in:
-                if y_urn_ad_in not in st.session_state.urunler:
-                    st.session_state.urunler.append(y_urn_ad_in)
+        yeni_u_ad = st.text_input("Ürün Adı:", key="EKLE_URUN_AD")
+        if st.button("➕ Ürünü Kaydet", key="BTN_EKLE_URUN"):
+            if yeni_u_ad:
+                if yeni_u_ad not in st.session_state.urunler:
+                    st.session_state.urunler.append(yeni_u_ad)
                     st.success("✅ Eklendi!")
-                    st.session_state.k_urn_ad = ""
+                    st.session_state.EKLE_URUN_AD = ""
                     st.rerun()
-                else: st.warning("Zaten mevcut.")
 
-       # --- ❌ SABİT TANIMLAMALARI LİSTEDEN SİL ---
-    st.subheader("❌ Kayıtlı Tanımlamaları Sil (Şoför, Depo, Ürün)")
+    st.markdown("---") # İki başlığı ayırmak için çizgi
+
+    # --- ❌ SABİT TANIMLAMALARI LİSTEDEN SİL ---
+    st.subheader("❌ Kayıtlı Tanımlamaları Sil")
     col_s1, col_s2, col_s3 = st.columns(3)
     
     with col_s1:
-        sil_sof = st.selectbox("Silinecek Şoförü Seçin:", st.session_state.soforler, key="s_sof_sel_unique")
-        if st.button("🗑️ Şoförü Listeden Kaldır", key="btn_sof_sil_unique"):
+        sil_sof = st.selectbox("Silinecek Şoför:", st.session_state.soforler, key="SIL_SOFOR_SELECT")
+        if st.button("🗑️ Şoförü Kaldır", key="BTN_SIL_SOFOR"):
             st.session_state.soforler.remove(sil_sof)
-            st.success("Şoför kaldırıldı.")
             st.rerun()
             
     with col_s2:
-        sil_mus = st.selectbox("Silinecek Depo/Bayi Seçin:", st.session_state.musteriler, key="s_mus_sel_unique")
-        if st.button("🗑️ Depoyu Listeden Kaldır", key="btn_mus_sil_unique"):
+        sil_mus = st.selectbox("Silinecek Depo/Müşteri:", st.session_state.musteriler, key="SIL_MUS_SELECT")
+        if st.button("🗑️ Depoyu Kaldır", key="BTN_SIL_DEPO"):
             st.session_state.musteriler.remove(sil_mus)
-            st.success("Müşteri/Depo kaldırıldı.")
             st.rerun()
             
     with col_s3:
-        sil_urn = st.selectbox("Silinecek Ürünü Seçin:", st.session_state.urunler, key="s_urn_sel_unique")
-        if st.button("🗑️ Ürünü Listeden Kaldır", key="btn_urn_sil_unique"):
+        sil_urn = st.selectbox("Silinecek Ürün:", st.session_state.urunler, key="SIL_URUN_SELECT")
+        if st.button("🗑️ Ürünü Kaldır", key="BTN_SIL_URUN"):
             st.session_state.urunler.remove(sil_urn)
-            st.success("Ürün kaldırıldı.")
             st.rerun()
     
     # --- 🧼 GÜN SONU TEMİZLİĞİ VE TEKLİ İŞ SİLME ---
