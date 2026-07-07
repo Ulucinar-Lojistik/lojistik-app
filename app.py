@@ -3,10 +3,6 @@ import pandas as pd
 import requests
 import json
 
-if "soforler" not in st.session_state: st.session_state.soforler = []
-if "musteriler" not in st.session_state: st.session_state.musteriler = []
-if "urunler" not in st.session_state: st.session_state.urunler = []
-    
 # Sayfa Genişlik Ayarı
 st.set_page_config(layout="wide", page_title="Lojistik Yönetici Kontrol Paneli")
 
@@ -109,46 +105,58 @@ if "⚙️ Yönetici Paneli" in rol_secimi and yonetici_izni:
     st.markdown("---")
     st.header("⚙️ Lojistik Yönetici Kontrol Paneli")
 
- # --- 🏢 SABİT TANIMLAMALAR ---
-st.subheader("📋 Sabit Tanımlamalar")
-col1, col2 = st.columns(2)
-
-with col1:
-    st.markdown("**➕ Yeni Ekle**")
-    # key kullanmıyoruz ki hata almayasın
-    y_sof = st.text_input("Şoför Ekle:")
-    if st.button("Şoförü Kaydet"):
-        if y_sof and y_sof not in st.session_state.soforler:
-            st.session_state.soforler.append(y_sof)
+ # --- 🔒 YÖNETİCİ PANELİ İÇERİĞİ ---
+if "⚙️ Yönetici Paneli" in rol_secimi and yonetici_izni:
+    st.markdown("---")
+    st.header("⚙️ Lojistik Yönetici Kontrol Paneli")
     
-    y_mus = st.text_input("Müşteri/Depo Ekle:")
-    if st.button("Müşteriyi Kaydet"):
-        if y_mus and y_mus not in st.session_state.musteriler:
-            st.session_state.musteriler.append(y_mus)
-            
-    y_urn = st.text_input("Ürün Ekle:")
-    if st.button("Ürünü Kaydet"):
-        if y_urn and y_urn not in st.session_state.urunler:
-            st.session_state.urunler.append(y_urn)
+    # --- 🏢 SABİT TANIMLAMALAR (EKLEME) ---
+    st.subheader("📋 Sabit Tanımlamalar")
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.markdown("**🚚 Şoför İşlemleri**")
+        y_sof = st.text_input("Şoför Adı (Plaka):")
+        if st.button("Şoförü Kaydet"):
+            if y_sof and y_sof not in st.session_state.soforler:
+                st.session_state.soforler.append(y_sof)
+    with col2:
+        st.markdown("**🗺️ Müşteri İşlemleri**")
+        y_mus = st.text_input("Müşteri Adı - Depo:")
+        if st.button("Müşteriyi Kaydet"):
+            if y_mus and y_mus not in st.session_state.musteriler:
+                st.session_state.musteriler.append(y_mus)
+    with col3:
+        st.markdown("**📦 Ürün İşlemleri**")
+        y_urn = st.text_input("Ürün Adı:")
+        if st.button("Ürünü Kaydet"):
+            if y_urn and y_urn not in st.session_state.urunler:
+                st.session_state.urunler.append(y_urn)
 
-with col2:
-    st.markdown("**🗑️ Listeden Sil**")
-    # selectbox'ı doğrudan listeye bağlıyoruz
-    s_sof = st.selectbox("Silinecek Şoför:", [""] + st.session_state.soforler)
-    if st.button("Şoförü Sil"):
-        if s_sof in st.session_state.soforler:
-            st.session_state.soforler.remove(s_sof)
-        
-    s_mus = st.selectbox("Silinecek Müşteri:", [""] + st.session_state.musteriler)
-    if st.button("Müşteriyi Sil"):
-        if s_mus in st.session_state.musteriler:
-            st.session_state.musteriler.remove(s_mus)
-        
-    s_urn = st.selectbox("Silinecek Ürün:", [""] + st.session_state.urunler)
-    if st.button("Ürünü Sil"):
-        if s_urn in st.session_state.urunler:
-            st.session_state.urunler.remove(s_urn)
-            
+    st.markdown("---")
+    
+    # --- 🗑️ SİLME İŞLEMLERİ ---
+    st.subheader("🗑️ Kayıtlı Tanımlamaları Sil")
+    col_s1, col_s2, col_s3 = st.columns(3)
+    
+    with col_s1:
+        s_sof = st.selectbox("Silinecek Şoför:", [""] + st.session_state.soforler)
+        if st.button("Şoförü Sil"):
+            if s_sof in st.session_state.soforler:
+                st.session_state.soforler.remove(s_sof)
+    with col_s2:
+        s_mus = st.selectbox("Silinecek Müşteri:", [""] + st.session_state.musteriler)
+        if st.button("Müşteriyi Sil"):
+            if s_mus in st.session_state.musteriler:
+                st.session_state.musteriler.remove(s_mus)
+    with col_s3:
+        s_urn = st.selectbox("Silinecek Ürün:", [""] + st.session_state.urunler)
+        if st.button("Ürünü Sil"):
+            if s_urn in st.session_state.urunler:
+                st.session_state.urunler.remove(s_urn)
+
+    st.markdown("---")
+   
     # --- 🧼 GÜN SONU TEMİZLİĞİ VE TEKLİ İŞ SİLME ---
     st.subheader("🧹 Gün Sonu Temizliği & İş İptal Etme")
     
