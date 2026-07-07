@@ -105,54 +105,62 @@ if "⚙️ Yönetici Paneli" in rol_secimi and yonetici_izni:
     st.markdown("---")
     st.header("⚙️ Lojistik Yönetici Kontrol Paneli")
 
-  # --- 🏢 SABİT TANIMLAMALAR ---
+ # --- 📋 SABİT TANIMLAMALAR (FORM YAPISI) ---
     st.subheader("📋 Sabit Tanımlamalar")
     col_t1, col_t2, col_t3 = st.columns(3)
-    
+
+    # 1. ŞOFÖR EKLEME
     with col_t1:
         st.markdown("**🚚 Şoför İşlemleri**")
-        st.text_input("Şoför Adı:", key="T_SOF_AD_YENI")
-        st.text_input("Plaka:", key="T_SOF_PLK_YENI")
-        if st.button("➕ Şoförü Kaydet", key="BTN_SOF_KAYDET_YENI"):
-            ad = st.session_state.T_SOF_AD_YENI
-            plk = st.session_state.T_SOF_PLK_YENI
-            if ad and plk:
-                formatli = f"{ad} ({plk})"
+        with st.form("sof_form", clear_on_submit=True):
+            s_ad = st.text_input("Şoför Adı:")
+            s_plk = st.text_input("Plaka:")
+            submit_sof = st.form_submit_button("➕ Kaydet")
+            if submit_sof and s_ad and s_plk:
+                formatli = f"{s_ad} ({s_plk})"
                 if formatli not in st.session_state.soforler:
                     st.session_state.soforler.append(formatli)
                     st.success("✅ Kaydedildi!")
-                    st.session_state.T_SOF_AD_YENI = ""
-                    st.session_state.T_SOF_PLK_YENI = ""
-                    st.rerun()
+        
+        # SİLME (Buna form gerekmez)
+        sil_sof = st.selectbox("Silinecek:", st.session_state.soforler, key="S_SOF_X")
+        if st.button("🗑️ Şoförü Sil"):
+            st.session_state.soforler.remove(sil_sof)
+            st.rerun()
 
+    # 2. MÜŞTERİ EKLEME
     with col_t2:
         st.markdown("**🗺️ Müşteri İşlemleri**")
-        st.text_input("Müşteri Adı:", key="T_MUS_AD_YENI")
-        st.text_input("Depo Adı:", key="T_DEP_AD_YENI")
-        if st.button("➕ Depoyu Kaydet", key="BTN_MUS_KAYDET_YENI"):
-            m = st.session_state.T_MUS_AD_YENI
-            d = st.session_state.T_DEP_AD_YENI
-            if m and d:
-                formatli = f"{m} - {d}"
+        with st.form("mus_form", clear_on_submit=True):
+            m_ad = st.text_input("Müşteri Adı:")
+            d_ad = st.text_input("Depo Adı:")
+            submit_mus = st.form_submit_button("➕ Kaydet")
+            if submit_mus and m_ad and d_ad:
+                formatli = f"{m_ad} - {d_ad}"
                 if formatli not in st.session_state.musteriler:
                     st.session_state.musteriler.append(formatli)
                     st.success("✅ Kaydedildi!")
-                    st.session_state.T_MUS_AD_YENI = ""
-                    st.session_state.T_DEP_AD_YENI = ""
-                    st.rerun()
 
+        sil_mus = st.selectbox("Silinecek:", st.session_state.musteriler, key="S_MUS_X")
+        if st.button("🗑️ Depoyu Sil"):
+            st.session_state.musteriler.remove(sil_mus)
+            st.rerun()
+
+    # 3. ÜRÜN EKLEME
     with col_t3:
         st.markdown("**📦 Ürün İşlemleri**")
-        st.text_input("Ürün Adı:", key="T_URN_AD_YENI")
-        if st.button("➕ Ürünü Kaydet", key="BTN_URN_KAYDET_YENI"):
-            u = st.session_state.T_URN_AD_YENI
-            if u:
-                if u not in st.session_state.urunler:
-                    st.session_state.urunler.append(u)
+        with st.form("urn_form", clear_on_submit=True):
+            u_ad = st.text_input("Ürün Adı:")
+            submit_urn = st.form_submit_button("➕ Kaydet")
+            if submit_urn and u_ad:
+                if u_ad not in st.session_state.urunler:
+                    st.session_state.urunler.append(u_ad)
                     st.success("✅ Kaydedildi!")
-                    st.session_state.T_URN_AD_YENI = ""
-                    st.rerun()
-                    
+        
+        sil_urn = st.selectbox("Silinecek:", st.session_state.urunler, key="S_URN_X")
+        if st.button("🗑️ Ürünü Sil"):
+            st.session_state.urunler.remove(sil_urn)
+            st.rerun()
             
     # --- 🧼 GÜN SONU TEMİZLİĞİ VE TEKLİ İŞ SİLME ---
     st.subheader("🧹 Gün Sonu Temizliği & İş İptal Etme")
