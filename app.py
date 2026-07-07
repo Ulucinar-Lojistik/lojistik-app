@@ -111,7 +111,7 @@ if "⚙️ Yönetici Paneli" in rol_secimi and yonetici_izni:
     
     with col_t1:
         st.markdown("**🚚 Yeni Şoför & Plaka**")
-        yeni_s_ad = st.text_input("Şoför Adı:", key="EKLE_SOFOR_AD")
+        yeni_s_ad = st.text_input("Şoför Adı:", key="EKLE_SOFOR_AD_2")
         yeni_s_plk = st.text_input("Plaka:", key="EKLE_SOFOR_PLK")
         if st.button("➕ Şoförü Kaydet", key="BTN_EKLE_SOFOR"):
             if yeni_s_ad and yeni_s_plk:
