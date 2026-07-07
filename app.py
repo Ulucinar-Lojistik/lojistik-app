@@ -105,70 +105,52 @@ if "⚙️ Yönetici Paneli" in rol_secimi and yonetici_izni:
     st.markdown("---")
     st.header("⚙️ Lojistik Yönetici Kontrol Paneli")
 
-    # --- 🏢 SABİT TANIMLAMALAR EKLE ---
-    st.subheader("📋 Sabit Tanımlamalar Ekle")
+    # --- 🏢 SABİT TANIMLAMALAR EKLE VE SİL (TEK BLOK) ---
+    st.subheader("📋 Sabit Tanımlamalar")
     col_t1, col_t2, col_t3 = st.columns(3)
     
     with col_t1:
-        st.markdown("**🚚 Yeni Şoför & Plaka**")
-        yeni_s_ad = st.text_input("Şoför Adı:", key="EKLE_SOFOR_AD_2")
-        yeni_s_plk = st.text_input("Plaka:", key="EKLE_SOFOR_PLK")
-        if st.button("➕ Şoförü Kaydet", key="BTN_EKLE_SOFOR"):
-            if yeni_s_ad and yeni_s_plk:
-                formatli = f"{yeni_s_ad} ({yeni_s_plk})"
-                if formatli not in st.session_state.soforler:
-                    st.session_state.soforler.append(formatli)
-                    st.success("✅ Eklendi!")
-                    st.session_state.EKLE_SOFOR_AD = ""
-                    st.session_state.EKLE_SOFOR_PLK = ""
-                    st.rerun()
-
-    with col_t2:
-        st.markdown("**🗺️ Yeni Müşteri & Depo**")
-        yeni_m_ad = st.text_input("Müşteri Adı:", key="EKLE_MUS_AD")
-        yeni_d_ad = st.text_input("Depo Adı:", key="EKLE_DEP_AD")
-        if st.button("➕ Depoyu Kaydet", key="BTN_EKLE_DEPO"):
-            if yeni_m_ad and yeni_d_ad:
-                formatli = f"{yeni_m_ad} - {yeni_d_ad}"
-                if formatli not in st.session_state.musteriler:
-                    st.session_state.musteriler.append(formatli)
-                    st.success("✅ Eklendi!")
-                    st.session_state.EKLE_MUS_AD = ""
-                    st.session_state.EKLE_DEP_AD = ""
-                    st.rerun()
-
-    with col_t3:
-        st.markdown("**📦 Yeni Ürün Ekle**")
-        yeni_u_ad = st.text_input("Ürün Adı:", key="EKLE_URUN_AD")
-        if st.button("➕ Ürünü Kaydet", key="BTN_EKLE_URUN"):
-            if yeni_u_ad:
-                if yeni_u_ad not in st.session_state.urunler:
-                    st.session_state.urunler.append(yeni_u_ad)
-                    st.success("✅ Eklendi!")
-                    st.session_state.EKLE_URUN_AD = ""
-                    st.rerun()
-
-    st.markdown("---") # İki başlığı ayırmak için çizgi
-
-    # --- ❌ SABİT TANIMLAMALARI LİSTEDEN SİL ---
-    st.subheader("❌ Kayıtlı Tanımlamaları Sil")
-    col_s1, col_s2, col_s3 = st.columns(3)
-    
-    with col_s1:
-        sil_sof = st.selectbox("Silinecek Şoför:", st.session_state.soforler, key="SIL_SOFOR_SELECT")
-        if st.button("🗑️ Şoförü Kaldır", key="BTN_SIL_SOFOR"):
+        st.markdown("**🚚 Şoför İşlemleri**")
+        y_sof_ad = st.text_input("Şoför Adı:", key="T_SOF_AD")
+        y_sof_plk = st.text_input("Plaka:", key="T_SOF_PLK")
+        if st.button("➕ Kaydet", key="BTN_K_SOF"):
+            if y_sof_ad and y_sof_plk:
+                formatli = f"{y_sof_ad} ({y_sof_plk})"
+                st.session_state.soforler.append(formatli)
+                st.session_state.T_SOF_AD = ""
+                st.session_state.T_SOF_PLK = ""
+                st.rerun()
+        sil_sof = st.selectbox("Sil:", st.session_state.soforler, key="S_SOF_SEL")
+        if st.button("🗑️ Sil", key="BTN_S_SOF"):
             st.session_state.soforler.remove(sil_sof)
             st.rerun()
-            
-    with col_s2:
-        sil_mus = st.selectbox("Silinecek Depo/Müşteri:", st.session_state.musteriler, key="SIL_MUS_SELECT")
-        if st.button("🗑️ Depoyu Kaldır", key="BTN_SIL_DEPO"):
+
+    with col_t2:
+        st.markdown("**🗺️ Müşteri İşlemleri**")
+        y_mus_ad = st.text_input("Müşteri Adı:", key="T_MUS_AD")
+        y_dep_ad = st.text_input("Depo Adı:", key="T_DEP_AD")
+        if st.button("➕ Kaydet", key="BTN_K_MUS"):
+            if y_mus_ad and y_dep_ad:
+                formatli = f"{y_mus_ad} - {y_dep_ad}"
+                st.session_state.musteriler.append(formatli)
+                st.session_state.T_MUS_AD = ""
+                st.session_state.T_DEP_AD = ""
+                st.rerun()
+        sil_mus = st.selectbox("Sil:", st.session_state.musteriler, key="S_MUS_SEL")
+        if st.button("🗑️ Sil", key="BTN_S_MUS"):
             st.session_state.musteriler.remove(sil_mus)
             st.rerun()
-            
-    with col_s3:
-        sil_urn = st.selectbox("Silinecek Ürün:", st.session_state.urunler, key="SIL_URUN_SELECT")
-        if st.button("🗑️ Ürünü Kaldır", key="BTN_SIL_URUN"):
+
+    with col_t3:
+        st.markdown("**📦 Ürün İşlemleri**")
+        y_urn_ad = st.text_input("Ürün Adı:", key="T_URN_AD")
+        if st.button("➕ Kaydet", key="BTN_K_URN"):
+            if y_urn_ad:
+                st.session_state.urunler.append(y_urn_ad)
+                st.session_state.T_URN_AD = ""
+                st.rerun()
+        sil_urn = st.selectbox("Sil:", st.session_state.urunler, key="S_URN_SEL")
+        if st.button("🗑️ Sil", key="BTN_S_URN"):
             st.session_state.urunler.remove(sil_urn)
             st.rerun()
     
