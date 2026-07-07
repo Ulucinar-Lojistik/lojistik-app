@@ -105,61 +105,41 @@ if "⚙️ Yönetici Paneli" in rol_secimi and yonetici_izni:
     st.markdown("---")
     st.header("⚙️ Lojistik Yönetici Kontrol Paneli")
 
- # --- 📋 SABİT TANIMLAMALAR (FORM YAPISI) ---
+ # --- 🏢 SABİT TANIMLAMALAR (KESİN ÇÖZÜM) ---
     st.subheader("📋 Sabit Tanımlamalar")
-    col_t1, col_t2, col_t3 = st.columns(3)
-
-    # 1. ŞOFÖR EKLEME
-    with col_t1:
-        st.markdown("**🚚 Şoför İşlemleri**")
-        with st.form("sof_form", clear_on_submit=True):
-            s_ad = st.text_input("Şoför Adı:")
-            s_plk = st.text_input("Plaka:")
-            submit_sof = st.form_submit_button("➕ Kaydet")
-            if submit_sof and s_ad and s_plk:
-                formatli = f"{s_ad} ({s_plk})"
-                if formatli not in st.session_state.soforler:
-                    st.session_state.soforler.append(formatli)
-                    st.success("✅ Kaydedildi!")
-        
-        # SİLME (Buna form gerekmez)
-        sil_sof = st.selectbox("Silinecek:", st.session_state.soforler, key="S_SOF_X")
-        if st.button("🗑️ Şoförü Sil"):
-            st.session_state.soforler.remove(sil_sof)
+    
+    # 1. ŞOFÖR İŞLEMLERİ
+    st.markdown("**🚚 Şoför İşlemleri**")
+    c1, c2 = st.columns([2, 1])
+    with c1:
+        y_sof = st.text_input("Yeni Şoför (Ad-Plaka):", key="INP_SOF_999")
+        if st.button("➕ Şoförü Ekle", key="BTN_SOF_999"):
+            if y_sof and y_sof not in st.session_state.soforler:
+                st.session_state.soforler.append(y_sof)
+                st.session_state.INP_SOF_999 = "" # Kutuyu temizle
+                st.rerun()
+    with c2:
+        s_sof = st.selectbox("Silinecek:", st.session_state.soforler, key="SEL_SOF_999")
+        if st.button("🗑️ Seçileni Sil", key="DEL_SOF_999"):
+            st.session_state.soforler.remove(s_sof)
             st.rerun()
 
-    # 2. MÜŞTERİ EKLEME
-    with col_t2:
-        st.markdown("**🗺️ Müşteri İşlemleri**")
-        with st.form("mus_form", clear_on_submit=True):
-            m_ad = st.text_input("Müşteri Adı:")
-            d_ad = st.text_input("Depo Adı:")
-            submit_mus = st.form_submit_button("➕ Kaydet")
-            if submit_mus and m_ad and d_ad:
-                formatli = f"{m_ad} - {d_ad}"
-                if formatli not in st.session_state.musteriler:
-                    st.session_state.musteriler.append(formatli)
-                    st.success("✅ Kaydedildi!")
+    st.divider()
 
-        sil_mus = st.selectbox("Silinecek:", st.session_state.musteriler, key="S_MUS_X")
-        if st.button("🗑️ Depoyu Sil"):
-            st.session_state.musteriler.remove(sil_mus)
-            st.rerun()
-
-    # 3. ÜRÜN EKLEME
-    with col_t3:
-        st.markdown("**📦 Ürün İşlemleri**")
-        with st.form("urn_form", clear_on_submit=True):
-            u_ad = st.text_input("Ürün Adı:")
-            submit_urn = st.form_submit_button("➕ Kaydet")
-            if submit_urn and u_ad:
-                if u_ad not in st.session_state.urunler:
-                    st.session_state.urunler.append(u_ad)
-                    st.success("✅ Kaydedildi!")
-        
-        sil_urn = st.selectbox("Silinecek:", st.session_state.urunler, key="S_URN_X")
-        if st.button("🗑️ Ürünü Sil"):
-            st.session_state.urunler.remove(sil_urn)
+    # 2. MÜŞTERİ İŞLEMLERİ
+    st.markdown("**🗺️ Müşteri İşlemleri**")
+    c3, c4 = st.columns([2, 1])
+    with c3:
+        y_mus = st.text_input("Yeni Müşteri (Ad-Depo):", key="INP_MUS_999")
+        if st.button("➕ Müşteri Ekle", key="BTN_MUS_999"):
+            if y_mus and y_mus not in st.session_state.musteriler:
+                st.session_state.musteriler.append(y_mus)
+                st.session_state.INP_MUS_999 = "" # Kutuyu temizle
+                st.rerun()
+    with c4:
+        s_mus = st.selectbox("Silinecek:", st.session_state.musteriler, key="SEL_MUS_999")
+        if st.button("🗑️ Seçileni Sil", key="DEL_MUS_999"):
+            st.session_state.musteriler.remove(s_mus)
             st.rerun()
             
     # --- 🧼 GÜN SONU TEMİZLİĞİ VE TEKLİ İŞ SİLME ---
