@@ -3,6 +3,10 @@ import pandas as pd
 import requests
 import json
 
+if "soforler" not in st.session_state: st.session_state.soforler = []
+if "musteriler" not in st.session_state: st.session_state.musteriler = []
+if "urunler" not in st.session_state: st.session_state.urunler = []
+    
 # Sayfa Genişlik Ayarı
 st.set_page_config(layout="wide", page_title="Lojistik Yönetici Kontrol Paneli")
 
@@ -105,42 +109,45 @@ if "⚙️ Yönetici Paneli" in rol_secimi and yonetici_izni:
     st.markdown("---")
     st.header("⚙️ Lojistik Yönetici Kontrol Paneli")
 
- # --- 🏢 SABİT TANIMLAMALAR (KESİN ÇÖZÜM) ---
-    st.subheader("📋 Sabit Tanımlamalar")
+ # --- 🏢 SABİT TANIMLAMALAR ---
+st.subheader("📋 Sabit Tanımlamalar")
+col1, col2 = st.columns(2)
+
+with col1:
+    st.markdown("**➕ Yeni Ekle**")
+    # key kullanmıyoruz ki hata almayasın
+    y_sof = st.text_input("Şoför Ekle:")
+    if st.button("Şoförü Kaydet"):
+        if y_sof and y_sof not in st.session_state.soforler:
+            st.session_state.soforler.append(y_sof)
     
-    # 1. ŞOFÖR İŞLEMLERİ
-    st.markdown("**🚚 Şoför İşlemleri**")
-    c1, c2 = st.columns([2, 1])
-    with c1:
-        y_sof = st.text_input("Yeni Şoför (Ad-Plaka):", key="INP_SOF_999")
-        if st.button("➕ Şoförü Ekle", key="BTN_SOF_999"):
-            if y_sof and y_sof not in st.session_state.soforler:
-                st.session_state.soforler.append(y_sof)
-                st.session_state.INP_SOF_999 = "" # Kutuyu temizle
-                st.rerun()
-    with c2:
-        s_sof = st.selectbox("Silinecek:", st.session_state.soforler, key="SEL_SOF_999")
-        if st.button("🗑️ Seçileni Sil", key="DEL_SOF_999"):
+    y_mus = st.text_input("Müşteri/Depo Ekle:")
+    if st.button("Müşteriyi Kaydet"):
+        if y_mus and y_mus not in st.session_state.musteriler:
+            st.session_state.musteriler.append(y_mus)
+            
+    y_urn = st.text_input("Ürün Ekle:")
+    if st.button("Ürünü Kaydet"):
+        if y_urn and y_urn not in st.session_state.urunler:
+            st.session_state.urunler.append(y_urn)
+
+with col2:
+    st.markdown("**🗑️ Listeden Sil**")
+    # selectbox'ı doğrudan listeye bağlıyoruz
+    s_sof = st.selectbox("Silinecek Şoför:", [""] + st.session_state.soforler)
+    if st.button("Şoförü Sil"):
+        if s_sof in st.session_state.soforler:
             st.session_state.soforler.remove(s_sof)
-            st.rerun()
-
-    st.divider()
-
-    # 2. MÜŞTERİ İŞLEMLERİ
-    st.markdown("**🗺️ Müşteri İşlemleri**")
-    c3, c4 = st.columns([2, 1])
-    with c3:
-        y_mus = st.text_input("Yeni Müşteri (Ad-Depo):", key="INP_MUS_999")
-        if st.button("➕ Müşteri Ekle", key="BTN_MUS_999"):
-            if y_mus and y_mus not in st.session_state.musteriler:
-                st.session_state.musteriler.append(y_mus)
-                st.session_state.INP_MUS_999 = "" # Kutuyu temizle
-                st.rerun()
-    with c4:
-        s_mus = st.selectbox("Silinecek:", st.session_state.musteriler, key="SEL_MUS_999")
-        if st.button("🗑️ Seçileni Sil", key="DEL_MUS_999"):
+        
+    s_mus = st.selectbox("Silinecek Müşteri:", [""] + st.session_state.musteriler)
+    if st.button("Müşteriyi Sil"):
+        if s_mus in st.session_state.musteriler:
             st.session_state.musteriler.remove(s_mus)
-            st.rerun()
+        
+    s_urn = st.selectbox("Silinecek Ürün:", [""] + st.session_state.urunler)
+    if st.button("Ürünü Sil"):
+        if s_urn in st.session_state.urunler:
+            st.session_state.urunler.remove(s_urn)
             
     # --- 🧼 GÜN SONU TEMİZLİĞİ VE TEKLİ İŞ SİLME ---
     st.subheader("🧹 Gün Sonu Temizliği & İş İptal Etme")
