@@ -151,30 +151,28 @@ if "⚙️ Yönetici Paneli" in rol_secimi and yonetici_izni:
     # --- ❌ SABİT TANIMLAMALARI LİSTEDEN SİL ---
     st.subheader("❌ Kayıtlı Tanımlamaları Sil (Şoför, Depo, Ürün)")
     col_s1, col_s2, col_s3 = st.columns(3)
-
+    
     with col_t1:
         st.markdown("**🚚 Yeni Şoför & Plaka Ekle**")
-        
-        # Sadece session_state kontrolü yaparak kutuyu oluştur
+        # Benzersiz anahtarlar kullanıyoruz
         yeni_sofor_ad = st.text_input("Şoför Adı Soyadı:", key="y_sof_ad_input")
         yeni_sofor_plk = st.text_input("Araç Plakası:", key="y_sof_plk_input")
         
-        if st.button("➕ Şoförü Kaydet", key="btn_sof_kaydet"):
+        if st.button("➕ Şoförü Kaydet", key="btn_sof_kaydet_yeni"):
             if yeni_sofor_ad and yeni_sofor_plk:
                 formatli = f"{yeni_sofor_ad} ({yeni_sofor_plk})"
                 if formatli not in st.session_state.soforler:
                     st.session_state.soforler.append(formatli)
                     st.success("✅ Şoför listeye eklendi!")
                     
-                    # 🔥 KUTULARI TEMİZLEMEK İÇİN KEY'LERİ SIFIRLIYORUZ
-                    # Dikkat: Key ismini yukarıda belirlediğinle aynı yapmalısın
+                    # Giriş alanlarını temizlemek için session_state'i sıfırlıyoruz
                     st.session_state.y_sof_ad_input = ""
                     st.session_state.y_sof_plk_input = ""
                     
                     st.rerun()
                 else: 
                     st.warning("Bu şoför zaten mevcut.")
-  
+     
     with col_s2:
         sil_mus = st.selectbox("Silinecek Depo/Bayi Seçin:", st.session_state.musteriler, key="s_mus_sel")
         if st.button("🗑️ Depoyu Listeden Kaldır", key="btn_mus_sil"):
