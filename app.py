@@ -88,7 +88,7 @@ else:
     yonetici_izni = False
 
 # --- 📊 ANA TABLO GÖSTERİMİ (HER İKİ ROLDE DE EN ÜSTTE GÖRÜNÜR) ---
-st.title("🚚 SEVKİYAT TAKİP VE AKTİF İŞ HAVUZU")
+st.title("🚚 ULUÇINAR KARAYOLU YÜK TAŞIMA KOOPERATİFİ SEVKİYAT TAKİP")
 
 if gercek_kayit_var:
     def satir_renklendir(row):
