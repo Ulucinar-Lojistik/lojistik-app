@@ -100,11 +100,6 @@ if gercek_kayit_var:
 else:
     st.info("Şu anda aktif iş havuzunda gösterilecek kayıt yok. Lütfen aşağıdan yeni iş emri ekleyin.")
 
-# --- 🔒 YÖNETİCİ PANELİ İÇERİĞİ ---
-if "⚙️ Yönetici Paneli" in rol_secimi and yonetici_izni:
-    st.markdown("---")
-    st.header("⚙️ Lojistik Yönetici Kontrol Paneli")
-
  # --- 🔒 YÖNETİCİ PANELİ İÇERİĞİ ---
 if "⚙️ Yönetici Paneli" in rol_secimi and yonetici_izni:
     st.markdown("---")
