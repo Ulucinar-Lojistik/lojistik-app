@@ -107,7 +107,7 @@ if "⚙️ Yönetici Paneli" in rol_secimi and yonetici_izni:
     
     # --- 🏢 SABİT TANIMLAMALAR (EKLEME) ---
  st.subheader("📋 Sabit Tanımlamalar")
-col1, col2, col3 = st.columns(3)
+ col1, col2, col3 = st.columns(3)
 
 with col1:
     st.markdown("**🚚 Şoför İşlemleri**")
@@ -135,6 +135,7 @@ with col3:
 st.markdown("---")
  # --- 🗑️ SİLME İŞLEMLERİ ---
  st.subheader("🗑️ Kayıtlı Tanımlamaları Sil")
+
  col_s1, col_s2, col_s3 = st.columns(3)
  
  with col_s1:
