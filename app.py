@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import requests
 import json
-
 if 'soforler' not in st.session_state: st.session_state.soforler = []
 if 'musteriler' not in st.session_state: st.session_state.musteriler = []
 if 'urunler' not in st.session_state: st.session_state.urunler = []
