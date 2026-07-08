@@ -106,7 +106,7 @@ if "⚙️ Yönetici Paneli" in rol_secimi and yonetici_izni:
     st.header("⚙️ Lojistik Yönetici Kontrol Paneli")
 
      # --- 🏢 SABİT TANIMLAMALAR EKLE ---
-    st.subheader("📋 Sabit Tanımlamalar Ekle (Mükerrer Kontrollü)")
+    st.subheader("📋 Sabit Tanımlamalar Ekle ")
     col_t1, col_t2, col_t3 = st.columns(3)
     
     with col_t1:
