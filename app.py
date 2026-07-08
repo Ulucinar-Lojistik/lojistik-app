@@ -127,7 +127,7 @@ if "⚙️ Yönetici Paneli" in rol_secimi and yonetici_izni:
      if st.button("Ürünü Kaydet"):
          if y_urn and y_urn not in st.session_state.urunler:
              st.session_state.urunler.append(y_urn)
- st.markdown("---")
+             st.markdown("---")
  
  # --- 🗑️ SİLME İŞLEMLERİ ---
  st.subheader("🗑️ Kayıtlı Tanımlamaları Sil")
