@@ -107,28 +107,32 @@ if "⚙️ Yönetici Paneli" in rol_secimi and yonetici_izni:
     
     # --- 🏢 SABİT TANIMLAMALAR (EKLEME) ---
  st.subheader("📋 Sabit Tanımlamalar")
- col1, col2, col3 = st.columns(3)
- 
- with col1:
-     st.markdown("**🚚 Şoför İşlemleri**")
-     y_sof = st.text_input("Şoför Adı (Plaka):")
-     if st.button("Şoförü Kaydet"):
-         if y_sof and y_sof not in st.session_state.soforler:
-             st.session_state.soforler.append(y_sof)
- with col2:
-     st.markdown("**🗺️ Müşteri İşlemleri**")
-     y_mus = st.text_input("Müşteri Adı - Depo:")
-     if st.button("Müşteriyi Kaydet"):
-         if y_mus and y_mus not in st.session_state.musteriler:
-             st.session_state.musteriler.append(y_mus)
- with col3:
-     st.markdown("**📦 Ürün İşlemleri**")
-     y_urn = st.text_input("Ürün Adı:")
-     if st.button("Ürünü Kaydet"):
-         if y_urn and y_urn not in st.session_state.urunler:
-             st.session_state.urunler.append(y_urn)
-             st.markdown("---")
- 
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    st.markdown("**🚚 Şoför İşlemleri**")
+    y_sof = st.text_input("Şoför Adı (Plaka):")
+    if st.button("Şoförü Kaydet"):
+        if y_sof and y_sof not in st.session_state.soforler:
+            st.session_state.soforler.append(y_sof)
+            st.rerun()
+
+with col2:
+    st.markdown("**🗺️ Müşteri İşlemleri**")
+    y_mus = st.text_input("Müşteri Adı - Depo:")
+    if st.button("Müşteriyi Kaydet"):
+        if y_mus and y_mus not in st.session_state.musteriler:
+            st.session_state.musteriler.append(y_mus)
+            st.rerun()
+
+with col3:
+    st.markdown("**📦 Ürün İşlemleri**")
+    y_urn = st.text_input("Ürün Adı:")
+    if st.button("Ürünü Kaydet"):
+        if y_urn and y_urn not in st.session_state.urunler:
+            st.session_state.urunler.append(y_urn)
+            st.rerun()
+st.markdown("---")
  # --- 🗑️ SİLME İŞLEMLERİ ---
  st.subheader("🗑️ Kayıtlı Tanımlamaları Sil")
  col_s1, col_s2, col_s3 = st.columns(3)
